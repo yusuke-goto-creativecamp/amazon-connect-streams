@@ -1,119 +1,122 @@
 # Amazon Connect Streams Documentation
 (c) 2018-2020 Amazon.com, Inc. All rights reserved.
 
-## Global Resiliency
-For details on using Amazon Connect Streams with the Connect Global Resiliency feature, please first refer to the specific documentation [here](Documentation-DR.md).
+## グローバルレジリエンシー
+Connect Global Resiliency機能でAmazon Connect Streamsを使用する詳細については、まず特定のドキュメント[こちら](Documentation-DR.md)を参照してください。
 
-### A note on "Routability"
-Note that routability in streams is only affected by agent statuses. Voice contacts will change the agent status, and thus can affect routability. Task and chat contacts do not affect routability. However, if the other channels hit their concurrent live contact limit(s), the agent will not be routed more contacts, but they will technically be in a routable agent state.
+### "ルーティング可能性 "に関する注意
+ストリームにおけるルーティング可能性は、エージェントのステータスにのみ影響されることに注意してください。音声コンタクトはエージェントのステータスを変更するため、ルータビリティに影響します。タスクとチャットのコンタクトは、ルーティングに影響しません。しかし、他のチャンネルが同時ライブコンタクトの制限に達した場合、エージェントはより多くのコンタクトをルーティングされませんが、技術的にはルーティング可能なエージェント状態になります。
 
-# Usage
-amazon-connect-streams is available from [npmjs.com](https://www.npmjs.com/package/amazon-connect-streams). If you'd like to download it here, you can use either of the files like `release/connect-streams*`. 
+# 使い方
+amazon-connect-streamsは[npmjs.com](https://www.npmjs.com/package/amazon-connect-streams)から入手できます。ここでダウンロードしたい場合は、`release/connect-streams*` のようにどちらかのファイルを使うことができる。
 
-Run `npm run release` to generate new release files. Full instructions for building locally with npm can be found [below](#build-your-own-with-npm). 
+`npm run release` を実行すると、新しいリリースファイルが生成される。npmを使ってローカルにビルドするための完全な手順は[下記](#build-your-own-with-npm)にあります。
 
-In version 1.x, we also support `make` for legacy builds. This option was removed in version 2.x. 
+バージョン 1.x では、レガシービルド用の `make` もサポートしていました。このオプションはバージョン2.xで削除されました。
 
-# Important Announcements
+# 重要なお知らせ
 
-1. March 2024 - In response to a Google Chrome feature launched on 7/13/2023 called [Storage Partitioning](https://developers.google.com/privacy-sandbox/3pcd/storage-partitioning), we made a short term fix on 2/10/2024 to adjust our mute functionality and synchronize the mute state across all CCPs. However, due to current limitations, this change required us to disable muting while being on hold. As a workaround, agents should mute themselves on the call before going on hold. We are planning to address this issue by August 2024 and revert back to original mute behavior.
-    * At the moment, the following APIs will fail when the contact is on hold:
-      * `voiceConnection.muteParticipant()`
+1. 2024年3月 - 2023年7月13日に開始されたGoogle Chromeの機能である[Storage Partitioning](https://developers.google.com/privacy-sandbox/3pcd/storage-partitioning)に対応して、2024年2月10日にミュート機能を調整し、すべてのCCPでミュート状態を同期させるための短期的な修正を行いました。しかし、現在の制限により、この変更では保留中のミュートを無効にする必要がありました。回避策として、エージェントは保留になる前に通話中のミュートを解除する必要があります。2024年8月までにこの問題に対処し、元のミュート動作に戻す予定です。
+    * 現時点では、以下のAPIは保留中に失敗します：
+      * `voiceConnection.muteParticipant()` * * `voiceConnection.muteParticipant()
       * `voiceConnection.unmuteParticipant()`
       * `agent.mute()`
       * `agent.unmute()`
-    * As a workaround, you can mute the call prior to placing the call on hold.
+    * 回避策として、通話を保留にする前にミュートにすることができます。
 
-1. December 2022 - In addition to the CCP, customers can now embed an application that provides guided experiences to your agents using the connect.agentApp. See the [updated documentation](https://github.com/amazon-connect/amazon-connect-streams/blob/master/Documentation.md#initialization-for-ccp-customer-profiles-amazon-q-connect-and-customviews) for details on usage.
-   - ### Guided experiences for agents
-     - With Amazon Connect you can now create guided step-by-step experiences that walk agents through tailored views that focus on what must be seen or done by the agent at a given moment during an interaction. You can design workflows for various types of customer interactions and present agents with different step-by-step guides based on context, such as call queue, customer information, and interactive voice response (IVR). This feature is available in the Connect agent workspace as well as an embeddable application that can be embedded into another website via the Streams API. For more information, visit the AWS website: https://aws.amazon.com/connect/agent-workspace/
-1. December 2022 - 2.4.2
-    * This patch fixes an issue in Streams’ Voice ID APIs that may have led to incorrect values being set against the generatedSpeakerID field in the VoiceIdResult segment of Connect Contact Trace Records (CTRs). This occurred in some scenarios where you call either enrollSpeakerInVoiceId(), evaluateSpeakerWithVoiceId(), or updateVoiceIdSpeakerId() in your custom CCP integration code. If you are using Voice ID and consuming Voice ID CTRs, or updating speaker ID in your agent workflow, please upgrade to this version.
-1. December 2022 - 2.4.1
-    * This version brings in updates that will provide enhanced monitoring experience to agents and supervisors, allowing to silently monitor multiparty calls, and if needed to barge in the call and take over control, mute agents, or drop them from the call. New APIs introduced with this feature are `isSilentMonitor`, `isBarge`, `isSilentMonitorEnabled`, `isBargeEnabled`, `isUnderSupervision`, `updateMonitorParticipantState`, `getMonitorCapabilities`, `getMonitorStatus`, `isForcedMute`. Before enabling Enhanced monitoring capabilities, ensure that you are using the latest version of the Contact Control Panel (CCP) or Agent workspace.
-1. August 2022 - 2.3.0
-    * [Update on 12/13/2022] Please see 2.4.2 for final resolution of the Voice ID CTR fix.
-1. Jan 2022 - 2.0.0
-    * Multiple calls to `initCCP` will no longer append multiple embedded CCPs to the window, and only the first call to `initCCP` will succeed. Please note that the use-case of initializing multiple CCPs has never been supported by Streams, and this change has been added to prevent unpredictable behavior arising from such cases.
-    * `agent.onContactPending` has been removed. Please use `contact.onPending` instead. `connect.onError` now triggers. Previously, this api did not work at all. Please be aware that, if you have application logic within this function, its behavior has changed. See its entry in documentation.md for more details.
-1. September 2021 - 1.7.0 comes with changes needed to use Amazon Connect Voice ID, which launched on 9/27/2021. For customers who want to use Voice ID, please upgrade Streams to version 1.7.0 or later in the next 1 month, otherwise the Voice ID APIs will stop working by the end of October 2021. For more details on the Voice ID APIs, please look at [the Voice ID APIs section](Documentation.md#voice-id-apis).
-1. July 2021 - We released a change to the CCP that lets agent set a next status such as Lunch or Offline while still on a contact, and indicate they don’t want to be routed new contacts while they finish up their remaining work. For more details on this feature, see the [Amazon Connect agent training guide](https://docs.aws.amazon.com/connect/latest/adminguide/set-next-status.html) and the feature's [release notes](https://docs.aws.amazon.com/connect/latest/adminguide/amazon-connect-release-notes.html#july21-release-notes). If your agents interact directly with Connect’s out-of-the-box CCPV2 UX, they will be able to access this feature by default. Otherwise, if your streamsJS application calls `agent.setState()` to switch agent status, you will need to update your code to use this feature:
-   - **Agent.setState()** has been updated so you can pass an optional flag `enqueueNextState: true` to trigger the Next Status behavior.
-   - A new **agent.onEnqueuedNextState()** listener lets you subscribe to events for when agents have selected/successfully enqueued their next status.
-   - A new **agent.getNextState()** API returns a state object if the agent has successfully selected a next state, and null otherwise.
-   - If you want to use the Next Status feature via `agent.setState()`, please also ensure that your code is using `contact.clear()` and not `contact.complete()` when clearing After Contact Work off a contact.
-1. December 2020 — 1.6.0 brings with it the release of a new Agent App API. In addition to the CCP, customers can now embed additional applications using connect.agentApp, including Customer Profiles and Amazon Q Connect. See the [updated documentation](Documentation.md#initialization-for-ccp-customer-profiles-and-amazon-q-connect) for details on usage. We are also introducing a preview release for Amazon Connect Voice ID.
-   - ### About Amazon Connect Customer Profiles
-     - Amazon Connect Customer Profiles provides pre-built integrations so you can quickly combine customer information from multiple external applications, with contact history from Amazon Connect. This allows you to create a customer profile that has all the information agents need during customer interactions in a single place.
-   - ### About Amazon Q Connect
-     - With Amazon Q Connect, agents can search and find content across multiple repositories, such as frequently asked questions (FAQs), wikis, articles, and step-by-step instructions for handling different customer issues. They can type questions or phrases in a search box (such as, "how long after purchase can handbags be exchanged?") without having to guess which keywords will work.
-   - ### About Amazon Connect Voice ID (The feature is in preview release for Amazon Connect and is subject to change)
-     - Amazon Connect Voice ID provides real-time caller authentication which makes voice interactions in contact centers more secure and efficient. Voice ID uses machine learning to verify the identity of genuine customers by analyzing a caller’s unique voice characteristics. This allows contact centers to use an additional security layer that doesn’t rely on the caller answering multiple security questions, and makes it easy to enroll and verify customers without changing the natural flow of their conversation.
-1. July 2020 -- We recently changed the new, omnichannel, CCP's behavior when it encounters three voice-only agent states: `FailedConnectAgent`, `FailedConnectCustomer`, and `AfterCallWork`.
-   - `FailedConnectAgent` -- Previously, we required the agent to click the "Clear Contact" button to clear this state. When the agent clicked the "Clear Contact" button, the previous behavior took the agent back to the `Available` state without fail. Now the `FailedConnectAgent` state will be "auto-cleared", much like `FailedConnectCustomer` always has been.
-   - `FailedConnectAgent` and `FailedConnectCustomer` -- We are now using the `contact.clear()` API to auto-clear these states. As a result, the agent will be returned to their previous visible agent state (e.g. `Available`). Previously, the agent had always been set to `Available` as a result of this "auto-clearing" behavior. Note that even custom CCPs will behave differently with this update for `FailedConnectAgent` and `FailedConnectCustomer`.
-   - `AfterCallWork` -- As part of the new `contact.clear()` behavior, clicking "Clear Contact" while in `AfterCallWork` will return the agent to their previous visible agent state (e.g. `Available`, etc.). Note that custom CCPs that implement their own After Call Work behavior will not be affected by this change.
-     - We are putting `contact.complete()` on a deprecation path. Therefore, you should start using `contact.clear()` in its place. If you want to emulate CCP's After Call Work behavior in your customer CCP, then make sure you use `contact.clear()` when clearing voice contacts.
+1. 2022年12月 - CCPに加えて、connect.agentAppを使用して、エージェントにガイド体験を提供するアプリケーションを埋め込むことができるようになりました。使用方法の詳細については、[更新されたドキュメント](https://github.com/amazon-connect/amazon-connect-streams/blob/master/Documentation.md#initialization-for-ccp-customer-profiles-amazon-q-connect-and-customviews)を参照してください。
+   - エージェントのためのガイド付きエクスペリエンス
+     - Amazon Connectを使用すると、エージェントが対話中に指定された瞬間に何を見たり実行したりする必要があるかに焦点を当てた、カスタマイズされたビューを通してエージェントを案内する、ガイド付きのステップバイステップのエクスペリエンスを作成できるようになりました。さまざまなタイプの顧客との対話のためのワークフローを設計し、コールキュー、顧客情報、対話型音声応答（IVR）などのコンテキストに基づいて、エージェントに異なるステップバイステップのガイドを表示できます。この機能は、Connect エージェント・ワークスペースだけでなく、Streams API を介して別のウェブサイトに埋め込むことができる埋め込み可能なアプリケーションでも利用できます。詳細については、AWSのウェブサイトhttps://aws.amazon.com/connect/agent-workspace/。
 
-## Overview
-The Amazon Connect Streams API (Streams) gives you the power to integrate your existing web applications with Amazon Connect.  Streams lets you embed the Contact Control Panel (CCP) and Customer Profiles app UI into your page.  It also enables you to handle agent and contact state events directly through an object oriented event driven interface.  You can use the built in interface or build your own from scratch: Streams gives you the choice.
+1. 2022年12月 - 2.4.2
+    * このパッチは、StreamsのVoice ID APIにおいて、Connect Contact Trace Records (CTR)のVoiceIdResultセグメント内のgeneratedSpeakerIDフィールドに不正な値が設定される可能性がある問題を修正します。この問題は、カスタムCCP統合コードでenrollSpeakerInVoiceId()、evaluateSpeakerWithVoiceId()、またはupdateVoiceIdSpeakerId()を呼び出す一部のシナリオで発生します。Voice IDを使用し、Voice ID CTRを消費している場合、またはエージェントワークフローでスピーカーIDを更新している場合は、このバージョンにアップグレードしてください。
 
-This library must be used in conjunction with
-[amazon-connect-chatjs](https://github.com/amazon-connect/amazon-connect-chatjs),
-[amazon-chime-sdk-js](https://github.com/aws/amazon-chime-sdk-js/blob/main/README.md),
-or [amazon-connect-taskjs](https://github.com/amazon-connect/amazon-connect-taskjs)
-in order to utilize Amazon Connect's Chat, Video or Task functionality.
+1. 2022年12月 - 2.4.1
+    * このバージョンでは、エージェントとスーパーバイザーに、より強化されたモニタリング体験を提供するアップデートが行われました。この機能で導入された新しい API は `isSilentMonitor`、`isBarge`、`isSilentMonitorEnabled`、`isBargeEnabled`、`isUnderSupervision`、`updateMonitorParticipantState`、`getMonitorCapabilities`、`getMonitorStatus`、`isForcedMute` です。監視機能の拡張を有効にする前に、Contact Control Panel（CCP）またはAgentワークスペースの最新バージョンを使用していることを確認してください。
 
-## Architecture
-Click [here](Architecture.md) to view a quick architecture overview of how the
-Amazon Connect Streams API works.
+1. 2022年8月 - 2.3.0
+    * 音声 ID CTR 修正の最終的な解決については、2.4.2 を参照してください。
+
+1. 2022年1月 - 2.0.0
+    * `initCCP`を複数回呼び出しても、複数の埋め込みCCPがウィンドウに追加されることはなくなりました。複数のCCPを初期化するというユースケースはStreamsでサポートされたことがなく、この変更はそのようなケースから発生する予測不可能な動作を防ぐために追加されました。
+    * `agent.onContactPending`は削除されました。代わりに `contact.onPending` を使用してください。`connect.onError` がトリガーされるようになりました。以前はこのAPIは全く動作しませんでした。この関数の中にアプリケーションロジックがある場合、その動作が変更されたことに注意してください。詳細は documentation.md のエントリを参照してください。
+
+1. 2021年9月 - 1.7.0には、2021年9月27日に開始されたAmazon Connect Voice IDを使用するために必要な変更が含まれています。Voice IDをご利用になりたいお客様は、今後1ヶ月以内にStreamsをバージョン1.7.0以降にアップグレードしてください。そうしないと、2021年10月末までにVoice ID APIが動作しなくなります。Voice ID APIの詳細については、[Voice ID APIsセクション](Documentation.md#voice-id-apis)をご覧ください。
+
+1. 2021年7月 - CCPの変更により、エージェントがコンタクトの処理中にランチやオフラインなどの次のステータスを設定できるようになりました。この機能の詳細については、[Amazon Connectエージェントトレーニングガイド](https://docs.aws.amazon.com/connect/latest/adminguide/set-next-status.html)およびこの機能の[リリースノート](https://docs.aws.amazon.com/connect/latest/adminguide/amazon-connect-release-notes.html#july21-release-notes)を参照してください。エージェントがConnectのすぐに使えるCCPV2 UXと直接やり取りする場合、デフォルトでこの機能にアクセスできます。それ以外の場合、streamsJSアプリケーションがエージェントの状態を切り替えるために `agent.setState()` を呼び出す場合は、この機能を使用するようにコードを更新する必要があります：
+   - Agent.setState()**が更新され、オプションのフラグ `enqueueNextState: true` を渡して Next Status 動作をトリガーできるようになりました。
+   - 新しい**agent.onEnqueuedNextState()**リスナーにより、エージェントが次のステータスを選択した時/成功した時のイベントを購読できます。
+   - 新しい **agent.getNextState()** API は、エージェントが次のステータスを正常に選択した場合はステートオブジェクトを返し、そうでない場合は null を返します。
+   - もし `agent.setState()` による Next Status 機能を使用したい場合、After Contact Work をコンタクトからクリアする際に `contact.complete()` ではなく、`contact.clear()` を使用していることを確認してください。
+
+1. 2020年12月 - 1.6.0では、新しいエージェントアプリAPIがリリースされました。CCPに加えて、顧客プロファイルやAmazon Q Connectなど、connect.agentAppを使用して追加のアプリケーションを埋め込むことができるようになりました。使用方法の詳細については、[更新されたドキュメント](Documentation.md#initialization-for-ccp-customer-profiles-and-amazon-q-connect)を参照してください。また、Amazon Connect Voice IDのプレビューリリースもご紹介します。
+   - ### Amazon Connect Customer Profilesについて
+     - Amazon Connect Customer Profilesは、複数の外部アプリケーションの顧客情報とAmazon Connectのコンタクト履歴をすばやく組み合わせることができるように、事前に構築された統合機能を提供します。これにより、エージェントが顧客とのやり取りで必要とするすべての情報を一箇所にまとめた顧客プロファイルを作成することができます。
+   - ### Amazon Q Connectについて
+     - Amazon Q Connectを使用すると、エージェントは、よくある質問（FAQ）、Wiki、記事、さまざまな顧客問題を処理するためのステップバイステップの手順など、複数のリポジトリでコンテンツを検索して見つけることができます。検索ボックスに質問やフレーズ（「ハンドバッグは購入後どのくらいで交換できますか」など）を入力すれば、どのキーワードが有効かを推測する必要はありません。
+   - ### Amazon Connect Voice IDについて（この機能はAmazon Connectのプレビューリリースであり、変更される可能性があります。）
+     - Amazon Connect Voice IDは、コンタクトセンターでの音声対話をより安全かつ効率的にするリアルタイムの発信者認証を提供します。Voice IDは、機械学習を使用して、発信者固有の声の特徴を分析することにより、真正な顧客の身元を確認します。これにより、コンタクトセンターは、発信者が複数のセキュリティ質問に答えることに依存しない追加のセキュリティレイヤーを使用することができ、自然な会話の流れを変えることなく、顧客の登録と確認を簡単に行うことができます。
+
+1. 2020年7月 -- 私たちは最近、新しいオムニチャネルのCCPが3つの音声のみのエージェントの状態に遭遇したときの動作を変更しました： `FailedConnectAgent`、`FailedConnectCustomer`、`AfterCallWork`です。
+   - `FailedConnectAgent` -- 以前は、この状態をクリアするためにエージェントが "Clear Contact "ボタンをクリックする必要がありました。エージェントが "Clear Contact "ボタンをクリックすると、以前の動作ではエージェントは必ず`Available`状態に戻っていました。これで `FailedConnectAgent` 状態は、これまで `FailedConnectCustomer` がそうであったように、"自動クリア "されるようになりました。
+   - `FailedConnectAgent` と `FailedConnectCustomer` -- 現在、これらの状態を自動クリアするために `contact.clear()` API を使用しています。その結果、エージェントは以前の可視エージェント状態（例えば `Available`）に戻ります。以前は、エージェントは常に `Available` に設定されていました。FailedConnectAgent` と `FailedConnectCustomer` については、カスタム CCP でもこのアップデートで動作が変わることに注意してください。
+   - `AfterCallWork` -- 新しい `contact.clear()` の動作の一部として、`AfterCallWork` の状態で "Clear Contact" をクリックすると、エージェントは以前の可視エージェント状態（例えば `Available` など）に戻ります。独自のアフターコールワーク動作を実装しているカスタムCCPは、この変更の影響を受けないことに注意してください。
+     - `contact.complete()`を非推奨にします。そのため、代わりに `contact.clear()` を使用する必要があります。CCPのAfter Call Workの動作を顧客のCCPでエミュレートしたい場合は、音声コンタクトをクリアするときに必ず`contact.clear()`を使用してください。
+
+## 概要
+Amazon Connect Streams API（Streams）を使用すると、既存のWebアプリケーションをAmazon Connectに統合できます。 Streamsを使用すると、Contact Control Panel（CCP）やCustomer ProfilesアプリのUIをページに埋め込むことができます。 また、オブジェクト指向のイベント駆動インターフェイスを通じて、エージェントやコンタクトの状態イベントを直接処理することができます。 組み込まれたインターフェイスを使用することも、ゼロから独自のインターフェイスを構築することもできます： Streamsはあなたに選択肢を提供します。
+
+このライブラリは
+[amazon-connect-chatjs](https://github.com/amazon-connect/amazon-connect-chatjs)と併用する必要があります、
+[amazon-chime-sdk-js](https://github.com/aws/amazon-chime-sdk-js/blob/main/README.md)、
+または[amazon-connect-taskjs](https://github.com/amazon-connect/amazon-connect-taskjs)
+と組み合わせて使用します。
+
+## アーキテクチャ
+[ここをクリック](Architecture.md)すると、Amazon Connect Stream APIがどのように動作するかの簡単なアーキテクチャの概要が表示されます。
+Amazon Connect Streams API がどのように動作するか、簡単なアーキテクチャの概要をご覧ください。
 
 ## Getting Started
 
-### Upgrading to the Latest Version of the CCP (AKA /ccp-v2)?
-If you are migrating to the new CCP, we encourage you to upgrade to the latest version of this repository. You should also upgrade to [the latest version of RTC-JS](https://github.com/aws/connect-rtc-js) as well, if you are using it. For a complete migration guide to the new CCP, and to fully understand the differences when using Streams with the new CCP, please see this post: https://docs.aws.amazon.com/connect/latest/adminguide/upgrade-to-latest-ccp.html. Also see: https://docs.aws.amazon.com/connect/latest/adminguide/upgrade-ccp-streams-api.html.
+### 最新バージョンの CCP (AKA /ccp-v2)にアップグレードしますか？
+新しい CCP に移行する場合は、このリポジトリの最新版にアップグレードすることをお勧めします。また、[RTC-JSの最新バージョン](https://github.com/aws/connect-rtc-js)を使用している場合は、同様にアップグレードしてください。新CCPへの完全な移行ガイドと、新CCPでStreamsを使用する際の違いを完全に理解するためには、こちらの投稿をご覧ください： https://docs.aws.amazon.com/connect/latest/adminguide/upgrade-to-latest-ccp.html. また、https://docs.aws.amazon.com/connect/latest/adminguide/upgrade-ccp-streams-api.html。
 
-### Allowlisting
-The first step to using the Streams API is to allowlist the pages you wish to embed.
-For our customer's security, we require that all domains which embed the CCP for
-a particular instance are explicitly allowlisted. Each domain entry identifies
-the protocol scheme, host, and port. Any pages hosted behind the same protocol
-scheme, host, and port will be allowed to embed the CCP components which are
-required to use the Streams library.
+### 許可リスト
+Streams APIを使用するための最初のステップは、埋め込みたいページを許可リストにすることです。
+顧客のセキュリティのために、特定のインスタンスにCCPを埋め込むすべてのドメインが明示的に許可リストに登録されることを要求します。各ドメイン・エントリは、プロトコル・スキーム、ホスト、およびポートを識別します。同じプロトコル・スキーム、ホスト、およびポートの後ろでホストされているページはすべて、Streams ライブラリを使用するために必要な CCP コンポーネントの埋め込みが許可されます。
 
-To allowlist your pages:
+ページを許可リストに登録するには
 
-1. Login to your AWS Account, then navigate to the Amazon Connect console.
-2. Choose the instance alias of the instance to allowlist
-   pages for to load the settings Overview page for your instance.
-3. In the navigation pane, choose "Approved origins".
-4. Choose "+ Add Origin", then enter a domain URL, e.g.
-   "https<nolink>://example.com", or "https<nolink>://example.com:9595" if your
-   website is hosted on a non-standard port.
+1. AWSアカウントにログインし、Amazon Connectコンソールに移動します。
+2. インスタンスの設定概要ページをロードするために、ページを許可するインスタンスのインスタンスエイリアスを選択します。
+3. ナビゲーションペインで、「Approved origins」を選択します。
+4. Add Origin "を選択し、ドメインURLを入力します。
+   例えば、"https<nolink>://example.com"、またはウェブサイトが非標準ポートでホストされている場合は、"https<nolink>://example.com:9595 "を入力します。
 
-#### A few things to note:
-* Allowlisted domains must be HTTPS.
-* All of the pages that attempt to initialize the Streams library must be hosted
-  on domains that are allowlisted as per the previous steps.
-* All open tabs that contain an initialized Streams library or any other CCP
-  tabs opened will be synchronized. This means that state changes made in one
-  open window will be communicated to all open windows.
-* Using multiple browsers at the same time for the same connect instance is not supported, and causes issues with the rtc communication.
+#### 注意事項
+* 許可リストに登録されたドメインは必ずHTTPSでなければならない。
+* Streams ライブラリを初期化しようとするページはすべて、前述の手順で許可リストに登録されたドメインでホストされている必要があります。
+* 初期化された Streams ライブラリを含むタブ、または他の CCP タブを開いているタブはすべて同期されます。これは、1つのウィンドウで行われた状態の変更が、開いているすべてのウィンドウに伝達されることを意味します。
+* 同じコネクト・インスタンスで複数のブラウザを同時に使用することはサポートされていません。
 
 
 ## Downloading Streams with npm
 
-`npm install amazon-connect-streams`
+```
+npm install amazon-connect-streams
+```
 
 ## Importing Streams with npm and ES6
 
-`import "amazon-connect-streams";`
+```
+import "amazon-connect-streams";
+```
 
-This will make the `connect` variable available in the current context.
+これにより、現在のコンテキストで `connect` 変数が使用可能になる。
 
 ## Usage with TypeScript
 
-`amazon-connect-streams` is compatible with TypeScript. You'll need to use version `3.0.1` or higher:
+`amazon-connect-streams`はTypeScriptと互換性があります。バージョン `3.0.1` 以上を使用する必要がある：
 
 ```ts
 import "amazon-connect-streams";
@@ -121,28 +124,24 @@ import "amazon-connect-streams";
 connect.core.initCCP({ /* ... */ });
 ```
 
-## Downloading Streams from Github
-The next step to embedding Amazon Connect into your application is to download the
-Streams library from GitHub. You can do that by cloning our public repository
-here:
+## GithubからStreamsをダウンロードする
+Amazon Connectをアプリケーションに組み込むための次のステップは、GitHubからStreamsライブラリをダウンロードすることです。こちらの公開リポジトリをクローンしてください：
 
 ```
 $ git clone https://github.com/aws/amazon-connect-streams
 ```
 
-Once you download streams, change into the directory and build it:
+ストリームをダウンロードしたら、ディレクトリに移動してビルドする：
 
 ```
 $ cd amazon-connect-streams
 $ make
 ```
 
-This will generate a file called `connect-streams-${VERSION}.js`, this is the full
-Amazon Connect Streams API which you will want to include in your page. You can serve
-`connect-streams-${VERSION}.js` with your web application.
+これで `connect-streams-${VERSION}.js` というファイルが生成されます。これは Amazon Connect Streams API の完全版で、あなたのページに含めることができます。ウェブアプリケーションで `connect-streams-${VERSION}.js` を提供することができます。
 
 ## Build your own with NPM
-Install latest LTS version of [NodeJS](https://nodejs.org)
+[NodeJS](https://nodejs.org)の最新LTSバージョンをインストールする。
 
 ### Instructions for Streams version 2.x:
 ```
@@ -152,16 +151,16 @@ $ npm install
 $ npm run release
 ```
 
-Find build artifacts in **release** directory - This will generate a file called `connect-streams.js` and the minified version of the same `connect-streams-min.js` - this is the full Connect Streams API which you will want to include in your page.
+**release**ディレクトリでビルドの成果物を探す - `connect-streams.js` というファイルが生成され、同じファイルの最小化バージョン `connect-streams-min.js` が生成されます。
 
 To run unit tests:
 ```
 $ npm run test-mocha
 ```
-Note: these tests run on the release files generated above
+注：これらのテストは、上記で生成されたリリース・ファイル上で実行される。
 
-### Instructions for Streams version 1.x: 
-You will also need to have `gulp` installed. You can install `gulp` globally.
+### Streams バージョン 1.x 用の説明： 
+`gulp` もインストールする必要がある。`gulp` はグローバルにインストールできる。
 
 ```
 $ npm install -g gulp
@@ -171,20 +170,19 @@ $ npm install
 $ npm run release
 ```
 
-Find build artifacts in **release** directory - This will generate a file called `connect-streams.js` and the minified version of the same `connect-streams-min.js` - this is the full Connect Streams API which you will want to include in your page.
+**release**ディレクトリでビルドの成果物を探す - `connect-streams.js` というファイルが生成され、同じファイルの最小化バージョン `connect-streams-min.js` が生成されます。
 
 To run unit tests:
 ```
 $ npm run gulp-test
 ```
-Note: these tests run on the release files generated above
+注：これらのテストは、上記で生成されたリリース・ファイル上で実行される。
 
-## Using the AWS SDK and Streams
-Streams has a "baked-in" version of the AWS-SDK in the `./src/aws-client.js` file. Make sure that you import Streams before the AWS SDK so that the `AWS` object bound to the `Window` is the object from your manually included SDK, and not from Streams.
+## AWS SDK と Streams の利用
+Streams の `./src/aws-client.js` ファイルには、AWS-SDK が "baked-in" されています。AWS SDK の前に Streams をインポートして、`Window` にバインドされる `AWS` オブジェクトが Streams のオブジェクトではなく、手動で取り込んだ SDK のオブジェクトになるようにしてください。
 
 ## Initialization
-Initializing the Streams API is the first step to verify that you have
-everything set up correctly and that you are able to listen for events.
+Streams APIを初期化することは、すべてが正しくセットアップされ、イベントをリッスンできることを確認する最初のステップである。
 
 ### `connect.core.initCCP()`
 ```html
@@ -194,7 +192,7 @@ everything set up correctly and that you are able to listen for events.
     <meta charset="UTF-8">
     <script type="text/javascript" src="connect-streams-min.js"></script>
   </head>
-  <!-- Add the call to init() as an onload so it will only run once the page is loaded -->
+  <!-- init()の呼び出しをonloadとして追加し、ページがロードされた時点で実行されるようにする。 -->
   <body onload="init()">
     <div id="container-div" style="width: 400px; height: 800px;"></div>
     <script type="text/javascript">
@@ -245,105 +243,65 @@ everything set up correctly and that you are able to listen for events.
   </body>
 </html>
 ```
-Integrates with Connect by loading the pre-built CCP located at `ccpUrl` into an
-iframe and placing it into the `containerDiv` provided. API requests are
-funneled through this CCP and agent and contact updates are published through it
-and made available to your JS client code.
-* `ccpUrl`: The URL of the CCP. This is the page you would normally navigate to
-  in order to use the CCP in a standalone page, it is different for each
-  instance.
-* `region`: Amazon connect instance region. ex: `us-west-2`. only required for chat channel.
-* `loginPopup`: Optional, defaults to `true`.  Set to `false` to disable the login popup   
-   which is shown when the user's authentication expires.
-* `loginOptions`: Optional, only valid when `loginPopup` is set to `true`.
-   Provide an object with the following properties to open loginpopup in a new window instead of a
-   new tab.
-   * `autoClose`: Optional, defaults to `false`. Set to `true` to automatically
-      close the login popup after the user logs in.
-   * `height`: This allows you to define the height of the login pop-up window.
-   * `width`: This allows you to define the width of the login pop-up window.
-   * `top`: This allows you to define the top of the login pop-up window.
-   * `left`: This allows you to define the left of the login pop-up window.
-* `loginPopupAutoClose`: Optional, defaults to `false`. Set to `true` in conjunction with the 
-   `loginPopup` parameter to automatically close the login Popup window once the authentication step
-   has completed. If the login page opened in a new tab, this parameter will also auto-close that
-   tab. This can also be set in `loginOptions` if those options are used.
-* `loginUrl`: Optional. Allows custom URL to be used to initiate the ccp, as in
-  the case of SAML authentication. [See more information](#saml-authentication)
-* `softphone`: This object is optional and allows you to specify some settings
-  surrounding the softphone feature of Connect.
-  * `allowFramedSoftphone`: Normally, the softphone microphone and speaker
-    components are not allowed to be hosted in an iframe. This is because the
-    softphone must be hosted in a single window or tab. The window hosting
-    the softphone session must not be closed during the course of a softphone
-    call or the call will be disconnected. If `allowFramedSoftphone` is `true`,
-    the softphone components will be allowed to be hosted in this window or tab.
-    If `allowFramedSoftphone` is `false`, please make sure you are importing the
-    [lily-rtc.js](https://github.com/aws/connect-rtc-js) package and adding `connect.core.initSoftphoneManager()`
-    to your code after `connect.core.initCCP()`.
-  * `disableRingtone`: This option allows you to completely disable the built-in
-    ringtone audio that is played when a call is incoming.
-  * `ringtoneUrl`: If the ringtone is not disabled, this allows for overriding
-    the ringtone with any browser-supported audio file accessible by the user.
-  * `disableEchoCancellation`: This option is only applicable in Chrome and allows you to initialize a custom or
-    embedded CCP with echo cancellation disabled. Setting this to `true` will disable **ALL** audio processing done by Chrome including Auto Gain Control.
-    - Please see this link https://docs.aws.amazon.com/prescriptive-guidance/latest/patterns/improve-call-quality-on-agent-workstations-in-amazon-connect-contact-centers.html for possible alternative options in approving auto quality.
-  - `allowFramedVideoCall`: Currently video call can only be in one single window or tab.. If `true`, CCP will handle 
-    video calling experience in this window or tab and agents would be able to see and turn 
-    on their video if they have video permission set in the security profile. If `false` or not provided, CCP will only provide voice calling.
-   - `VDIPlatform`: This option is only applicable for virtual desktop interface integrations. If set, it will configure CCP to optimize softphone audio configuration for the VDI. Options can be provided by using enum `VDIPlatformType`. If `allowFramedSoftphone` is `false` and `VDIPlatform` is going to be set, please make sure you are passing this parameter into `connect.core.initSoftphoneManager()`. For example, `connect.core.initSoftphoneManager({ VDIPlatform: "CITRIX" })`
-  - `allowEarlyGum`: If `true` or not provided, CCP will capture the agent’s browser microphone media stream before the contact arrives to reduce the call setup latency. If `false`, CCP will only capture agent media stream after the contact arrives.
-- `pageOptions`: This object is optional and allows you to configure which configuration sections are displayed in the settings tab.
-  - `enableAudioDeviceSettings`: If `true`, the settings tab will display a section for configuring audio input and output devices for the agent's local
-    machine. If `false`, or if `pageOptions` is not provided, the agent will not be able to change audio device settings from the settings tab. will not be
-    displayed.
-    - Important Note: If you are using Firefox as your browser, the output audio device list will be empty and CCP will use the computer's default output audio settings.
-    - To enable output devices for Audio Device Settings, please enable `media.setsinkid.enabled` in Firefox by navigating to `about:config` in Firefox. Then, search for `media.setsinkid.enabled` and toggle it to true.
-  - `enableVideoDeviceSettings`: If `true`, the settings tab will display a section for configuring video input devices for the agent's local
-    machine. If `false`, or if `pageOptions` is not provided, the agent will not be able to change video device settings from the settings tab. will not be
-    displayed.
-  - `enablePhoneTypeSettings`: If `true`, or if `pageOptions` is not provided, the settings tab will display a section for configuring the agent's phone type
-    and deskphone number. If `false`, the agent will not be able to change the phone type or deskphone number from the settings tab.
-- `shouldAddNamespaceToLogs`: prepends `[CCP]` to all logs logged by the CCP. Important note: there are a few logs made by the CCP before the namespace is prepended.
-- `ccpAckTimeout`: A timeout in ms that tells CCP how long it should wait for an `ACKNOWLEDGE` message from the shared worker after CCP has sent a `SYNCHRONIZE` message to the shared worker. This is important because an `ACKNOWLEDGE` message is only sent back to CCP if the shared worker is initialized and a shared worker is only initialized if the agent is logged in. Moreover, this check happens continuously.
-- `ccpSynTimeout`: A timeout in ms that tells CCP how long to wait before sending another `SYNCHRONIZE` message to the shared worker, which should trigger the shared worker to send back an `ACKNOWLEDGE` if initialized. This event essentially checks if the shared worker was initialized aka agent is logged in. This check happens continuously as well.
-- `ccpLoadTimeout`: A timeout in ms that tells CCP how long to wait before sending the very first `SYNCHRONIZE` message. The user experience here is that on the first CCP initialization, the login flow is delayed by this timeout.
-  - As an example, if this timeout was set to 10 seconds, then the login pop-up will not open up until 10 seconds has pass.
+`ccpUrl`にあるビルド済みの CCP を iframe に読み込み、提供された `containerDiv` に配置することで Connect と統合します。API リクエストはこの CCP を経由し、エージェントとコンタクトの更新はこの CCP を通して公開され、JS クライアントコードで利用できるようになります。
+* CCP の URL： CCP の URL。これは、CCPをスタンドアロンのページで使用するために、通常移動するページです。
+* インスタンスごとに異なります： 例: `us-west-2`。チャットチャネルにのみ必要です。
+* `loginPopup`： オプション。デフォルトは `true` である。 ユーザーの認証が切れたときに表示されるログインポップアップを無効にするには `false` を設定する。
+* `loginOptions`: オプション： オプション。`loginPopup` が `true` に設定されている場合のみ有効である。
+   新しいタブの代わりに新しいウィンドウでloginpopupを開くには、以下のプロパティを持つオブジェクトを指定してください。
+   * `autoClose`： オプション。デフォルトは `false` である。`true`に設定すると、ユーザがログインした後にログインポップアップを自動的に閉じる。
+   * `height`: オプション： ログインポップアップウィンドウの高さを指定します。
+   * `width`: ログインポップアップウィンドウの幅を指定します： ログインポップアップウィンドウの幅を指定します。
+   * `top`: ログインポップアップウィンドウの上端を指定します： `top`: ログインポップアップウィンドウの上部を指定します。
+   * `left`: ログインポップアップウィンドウの左端を指定します： ログインポップアップウィンドウの左端を指定します。
+* `loginPopupAutoClose`： オプション。デフォルトは `false` である。`loginPopup` パラメータと一緒に `true` に設定すると、認証ステップが完了した後にログインポップアップウィンドウを自動的に閉じます。ログインページが新しいタブで開かれた場合、このパラメータはそのタブも自動的に閉じます。このパラメータは `loginOptions` で設定することもできる。
+* `loginUrl`： オプション。SAML 認証の場合のように、ccp を開始する際にカスタム URL を使用できるようにする。[詳細はこちら](#saml-authentication) を参照ください。
+* `softphone`： このオブジェクトはオプションで、コネクトのソフトフォン機能に関する設定を行うことができます。
+  * `allowFramedSoftphone`： 通常、ソフトフォンのマイクとスピーカーのコンポーネントを iframe でホストすることはできません。これは、ソフトフォンが1つのウィンドウまたはタブでホストされている必要があるためです。ソフトフォン通話中に、ソフトフォンセッションをホストしているウィンドウを閉じてはいけません。`allowFramedSoftphone` が `true` の場合、ソフトフォンコンポーネントをこのウィンドウまたはタブでホストすることが許可される。
+    `allowFramedSoftphone` が `false` の場合、[lily-rtc.js](https://github.com/aws/connect-rtc-js) パッケージをインポートし、 `connect.core.initCCP()` の後に `connect.core.initSoftphoneManager()` をコードに追加していることを確認してください。
+  * `disableRingtone`： `disableRingtone`: このオプションを使うと、着信時に再生される内蔵着信音の音声を完全に無効にすることができる。
+  * `ringtoneUrl`： `ringtoneUrl`: 着信音が無効化されていない場合、ユーザーがアクセスできるブラウザがサポートするオーディオファイルで着信音を上書きすることができます。
+  * `disableEchoCancellation`: 着信音を無効にする： このオプションはChromeでのみ適用可能で、エコーキャンセルを無効にしてカスタムCCPまたは埋め込みCCPを初期化することができます。このオプションを `true` に設定すると、オートゲインコントロールを含む、Chrome による **すべての** 音声処理が無効になります。
+    - 自動画質を承認する代替オプションについては、こちらのリンク https://docs.aws.amazon.com/prescriptive-guidance/latest/patterns/improve-call-quality-on-agent-workstations-in-amazon-connect-contact-centers.html を参照してください。
+  - `allowFramedVideoCall`： 現在のところ、ビデオ通話は1つのウィンドウまたはタブ内でのみ可能です。`true`の場合、CCPはこのウィンドウまたはタブでビデオ通話を行い、エージェントはセキュリティプロファイルにビデオ通話許可が設定されていれば、自分のビデオを見たり、オンにしたりすることができます。`false`の場合、または何も設定されていない場合、CCPは音声通話のみを提供します。
+   - `VDIPlatform`： このオプションは仮想デスクトップインターフェイスの統合にのみ適用されます。`VDIPlatform`：このオプションは、仮想デスクトップ・インターフェイスの統合にのみ適用されます。オプションは、列挙型`VDIPlatformType`を使用して指定できます。`allowFramedSoftphone` が `false` で、`VDIPlatform` を設定する場合は、このパラメータを `connect.core.initSoftphoneManager()` に渡すようにしてください。例えば、`connect.core.initSoftphoneManager({ VDIPlatform: "CITRIX" })` とします。
+  - `allowEarlyGum`： `true`または指定しない場合、CCPはコンタクトが到着する前にエージェントのブラウザマイクのメディアストリームをキャプチャし、コールセットアップの待ち時間を短縮します。`false`の場合、CCPはコンタクトが到着した後にのみエージェントのメディアストリームをキャプチャします。
+- `pageOptions`： このオブジェクトはオプションで、どの設定セクションを設定タブに表示するかを設定することができる。
+  - `enableAudioDeviceSettings`: このオブジェクトはオプションである： `true` の場合、設定タブにエージェントのローカルマシンのオーディオ入出力デバイスを設定するセクションが表示されます。`false` または `pageOptions` が指定されていない場合、エージェントは設定タブからオーディオデバイスの設定を変更することはできません。
+    - 重要: ブラウザとしてFirefoxを使用している場合、出力オーディオデバイスリストは空になり、CCPはコンピュータのデフォルトの出力オーディオ設定を使用します。
+    - Audio Device Settingsの出力デバイスを有効にするには、Firefoxで`about:config`に移動して、`media.setsinkid.enabled`を有効にしてください。次に、`media.setsinkid.enabled`を検索し、trueに切り替えます。
+  - `enableVideoDeviceSettings`： `true` の場合、設定タブにエージェントのローカルマシンのビデオ入力デバイスを設定するセクションが表示されます。`false` または `pageOptions` が指定されていない場合、エージェントは設定タブからビデオデバイスの設定を変更することができません。
+  - enablePhoneTypeSettings`： true`の場合、または `pageOptions` が提供されない場合、設定タブにエージェントの電話タイプとデスクホン番号を設定するセクションが表示されます。false`の場合、エージェントは設定タブから電話タイプやデスクホン番号を変更することはできません。
+- `shouldAddNamespaceToLogs`：CCPによって記録されるすべてのログの先頭に`[CCP]`を追加します。重要: 名前空間が先頭に追加される前に CCP によって作成されるログがいくつかあります。
+- `ccpAckTimeout`： CCP が共有ワーカーに `SYNCHRONIZE` メッセージを送信した後、共有ワーカーからの `ACKNOWLEDGE` メッセージを待つべき時間を ms 単位で指定します。これは重要です。なぜなら、`ACKNOWLEDGE`メッセージは、共有ワーカーが初期化されている場合にのみCCPに送り返され、共有ワーカーはエージェントがログインしている場合にのみ初期化されるからです。さらに、このチェックは継続的に行われます。
+- `ccpSynTimeout`： 初期化された場合、共有ワーカーが `ACKNOWLEDGE` を送り返すトリガーとなるはずです。このイベントは基本的に、共有ワーカーが初期化されたかどうか、別名エージェントがログインしているかどうかをチェックします。このチェックは継続的に行われます。
+- `ccpLoadTimeout`： 最初の `SYNCHRONIZE` メッセージを送信するまでの待ち時間をミリ秒単位で指定します。ここでのユーザーエクスペリエンスは、最初のCCPの初期化時に、ログインフローがこのタイムアウトの分だけ遅れるということです。
+  - 例として、このタイムアウトが10秒に設定されていた場合、ログインポップアップは10秒経過するまで開きません。
 
-#### A few things to note:
-* You have the option to show or hide the pre-built UI by showing or hiding the
-`container-div` into which you place the iframe, or applying a CSS rule like
-this:
+#### いくつかの注意点があります：
+* iframeを配置する`container-div`を表示するか非表示にするか、または以下のようなCSSルールを適用することで、あらかじめ組み込まれたUIを表示したり非表示にしたりすることができます：
 ```css
 #container-div iframe {
   display: none;
 }
 ```
-* The CCP UI is rendered in an iframe under the container element provided.
-  The iframe fills its container element with `width: 100%; height: 100%`.
-  To customize the size of the CCP, set the width and height for the container element.
-* The CCP is designed to be responsive (used in various sizes).
-  The smallest size we design for is 320px x 460px.
-  For a good user experience, we recommend that you do not go smaller than this size.
-* CSS styles you add to your site will NOT be applied to the CCP because it is
-  rendered in an iframe.
-* If you are trying to use chat specific functionalities, please also include
-  [ChatJS](https://github.com/amazon-connect/amazon-connect-chatjs) in your code.
-  We omit ChatJS from the release file so that streams can be used without ChatJS.
-  Streams only needs ChatJS when it is being used for chat. Note that when including ChatJS,
-  it must be imported after StreamsJS, or there will be AWS SDK issues
-  (ChatJS relies on the ConnectParticipant Service, which is not in the Streams AWS SDK).
-* If you are building your own video functionalities, please also include
-  [Amazon Chime SDK JS](https://github.com/aws/amazon-chime-sdk-js) in your code. You can also include
-  [Amazon Chime SDK Component Library React](https://github.com/aws/amazon-chime-sdk-component-library-react) to
-  leverage ready-to-use UI and state managements components in React.
-* If you are using task functionalities you must include [TaskJS](https://github.com/amazon-connect/amazon-connect-taskjs). TaskJS should be imported after Streams.
-* If you'd like access to the WebRTC session to further customize the softphone experience
-  you can use [connect-rtc-js](https://github.com/aws/connect-rtc-js). Please refer to the connect-rtc-js readme for detailed instructions on integrating connect-rtc-js with Streams.
-* `initCCP` **should not be used to embed multiple CCPs in the same browser context** as this causes unpredictable behavior. In version 2.0 a check has been added to automatically prevent subsequent invocations of `initCCP` from embedding additional CCPs.
-  * It is possible to embed multiple CCPs in the same page if they are associated with different Connect instances and are being embedded in different browser contexts, such that their Window objects are different (e.g. in different iframes). You won't be able to embed multiple CCPs under the same Window object or invoke `initCCP` multiple times in the same browser context.
-  * Instead of loading Streams once for the whole page, you'll need to load Streams separately in each iframe, and invoke `initCCP` separately in each.
-  * Once the iframes finish loading, you can then use the `contentWindow.connect` property on each iframe to access its Streams object and make API calls to the specific CCP embedded inside. As an example of embedding CCPs twice on the same page for two Connect instances, A and B:
+* CCP UIは、提供されたコンテナ要素の下にiframeでレンダリングされます。
+  iframeはコンテナ要素を`width: 100%; height: 100%` で満たします。
+  CCPのサイズをカスタマイズするには、コンテナ要素の幅と高さを設定してください。
+* CCPはレスポンシブ（様々なサイズで使用できる）ように設計されています。
+  最も小さいサイズは320px x 460pxです。
+  良いユーザー体験のために、このサイズより小さくしないことをお勧めします。
+* あなたのサイトに追加したCSSスタイルは、CCPに適用されません。
+* チャットに特化した機能を使用する場合は、コードに[ChatJS](https://github.com/amazon-connect/amazon-connect-chatjs)も含めてください。
+  ストリームがChatJSなしで使用できるように、リリース・ファイルからChatJSを省略しています。
+  ストリームが ChatJS を必要とするのは、チャットに使用する場合だけです。ChatJS を含める場合、StreamsJS の後にインポートしないと AWS SDK の問題が発生することに注意してください（ChatJS は ConnectParticipant Service に依存しており、これは Streams AWS SDK にはありません）。
+* 独自のビデオ機能を構築する場合は、[Amazon Chime SDK JS](https://github.com/aws/amazon-chime-sdk-js) もコードに含めてください。また、[Amazon Chime SDK Component Library React](https://github.com/aws/amazon-chime-sdk-component-library-react) をインクルードすることで、Reactですぐに使えるUIや状態管理コンポーネントを利用することができます。
+* タスク機能を使用する場合は、[TaskJS](https://github.com/amazon-connect/amazon-connect-taskjs)をインクルードする必要があります。TaskJS は Streams の後にインポートしてください。
+* WebRTC セッションにアクセスしてソフトフォン体験をさらにカスタマイズしたい場合は、[connect-rtc-js](https://github.com/aws/connect-rtc-js) を使用できます。connect-rtc-js と Streams の統合に関する詳しい説明は、connect-rtc-js readme を参照してください。
+* 複数の CCP を同じブラウザコンテキストに埋め込むために `initCCP` を使用すべきではありません。バージョン2.0では、`initCCP`の後続の呼び出しが追加のCCPを埋め込むことを自動的に防止するチェックが追加されました。
+  * 複数のCCPを同じページに埋め込むことは、それらが異なるコネクト・インスタンスに関連付けられ、異なるブラウザ・コンテキストに埋め込まれ、それらのWindowオブジェクトが異なる場合（例えば、異なるiframe内）に可能です。複数のCCPを同じWindowオブジェクトの下に埋め込んだり、同じブラウザコンテキストで `initCCP` を複数回呼び出したりすることはできません。
+  * ページ全体でストリームを一度ロードする代わりに、各 iframe で別々にストリームをロードし、それぞれで別々に `initCCP` を呼び出す必要があります。
+  * iframeの読み込みが完了したら、各iframeの`contentWindow.connect`プロパティを使ってStreamsオブジェクトにアクセスし、中に埋め込まれた特定のCCPに対してAPIコールを行うことができます。2つのコネクト・インスタンス（AとB）に対して、同じページに2回CCPを埋め込む例です：
 
 ```js
 var frameA = document.createElement('iframe');
@@ -366,30 +324,30 @@ var contentDocumentA = [
          "</body>",
        "</html>"
      ].join('');
-var contentDocumentB = ...; // same as above, but with initCCP parameters for instance B
+var contentDocumentB = ...; // 上記と同じだが、initCCP パラメーターは例えば B
 frameA.srcdoc = contentDocumentA;
 frameB.srcdoc = contentDocumentB;
 [frameA, frameB].forEach((frame) => {
   frame.allow = "microphone; autoplay; clipboard-write";
   frame.style = "width:400px;height:800px;margin:0;border:0;padding:0px;";
   frame.scrolling = "no";
-  document.documentElement.append(frame); // You can append the frames wherever you need each CCP to appear.
+  document.documentElement.append(frame); // 各CCPを表示させたい場所にフレームを追加することができる。
 });
 
-// Wait for iframes to load, then contentWindow.connect will be set to each frame's Streams object.
-// Until the iframes have finished loading Streams, contentWindow.connect will be undefined
+// iframeのロードを待ち、contentWindow.connectを各フレームのStreamsオブジェクトに設定する。
+// iframeがStreamsをロードし終わるまで、contentWindow.connectは未定義になります。
 var connectA = frameA.contentWindow.connect;
 var connectB = frameB.contentWindow.connect;
 
 connectA.contact(function(contact) { /* ... */ });
 ```
 
-### How can I determine that the agent is logged out or that their session has expired?
-* You can use `connect.core.onAuthFail()` to subscribe a callback function that will be called if the agent was unable to authenticate to Connect using the credentials set in their browser (if any), so you can present a button or popup for the agent to log back in or start a new session.
+### エージェントがログアウトしているか、セッションが期限切れであることを判断するにはどうすればよいですか？
+* `connect.core.onAuthFail()` を使用して、エージェントがブラウザに設定された認証情報を使用して Connect に認証できなかった場合に呼び出されるコールバック関数をサブスクライブできます。
 ```js
 connect.core.onAuthFail(function(){
-  // agent logged out or session expired.  needs login
-  // show button for login or popup a login screen. 
+  // ログインが必要です。
+  // ログイン用のボタンを表示するか、ログイン画面をポップアップします。
 });
 ```
 
@@ -401,7 +359,7 @@ connect.core.onIframeRetriesExhausted(() => {
   console.log("We have run out of retries to reload the CCP Iframe");
 })
 ```
-Subscribes a callback function to be called when the iframe failed to load, after attempting all retries. An Iframe Retry (refresh of the iframe page) is scheduled whenever there is a `connect.EventType.ACK_TIMEOUT`. If a `connect.EventType.ACKNOWLEDGE` event happens before the scheduled retry, the retry is cancelled. We allow for 6 scheduled retries. Once these are exhausted, `connect.EventType.ACK_TIMEOUT` events do not trigger scheduled retries.
+すべての再試行を試みた後、iframe の読み込みに失敗したときに呼び出されるコールバック関数をサブスクライブする。iframe の再試行（iframe ページの更新）は、`connect.EventType.ACK_TIMEOUT` が発生するたびにスケジュールされます。再試行がスケジュールされる前に `connect.EventType.ACKNOWLEDGE` イベントが発生した場合、再試行はキャンセルされます。予定されている再試行は6回までとする。これを使い切ると、`connect.EventType.ACK_TIMEOUT`イベントはスケジュールされた再試行をトリガーしません。
 
 ### `connect.core.onAuthorizeSuccess()`
 ```js
@@ -409,7 +367,7 @@ connect.core.onAuthorizeSuccess(() => {
   console.log("authorization succeeded! Hooray");
 });
 ```
-Subscribes a callback function to be called when the agent authorization api succeeds.
+エージェント認証APIが成功したときに呼び出されるコールバック関数をサブスクライブします。
 
 ### `connect.core.onCTIAuthorizeRetriesExhausted()`
 ```js
@@ -417,7 +375,7 @@ connect.core.onCTIAuthorizeRetriesExhausted(() => {
   console.log("We have failed CTI API authorization multiple times and we are out of retries");
 });
 ```
-Subscribes a callback function to be called when multiple authorization-type CTI API failures have happened. After this event occurs, streams will not try to re-authenticate the user when more CTI API authorization-type (401) failures happen. Note that CTI APIs are the agent, contact, and connection apis (specifically, those listed under the `connect.ClientMethods` enum). Therefore, it may be prudent to indicate to the agent that there is a problem related to authorization.
+複数の認証型 CTI API 失敗が発生した場合に呼び出されるコールバック関数をサブスクライブします。このイベントが発生すると、CTI API の認証タイプ (401) の失敗がさらに発生しても、ストリームはユーザーの再認証を試みなくなります。CTI API はエージェント、コンタクト、および接続 API (具体的には `connect.ClientMethods` 列挙型の下にリストされているもの) であることに注意すること。したがって、認可に関連する問題があることをエージェントに示すことが賢明かもしれない。
 
 ### `connect.core.onAuthorizeRetriesExhausted()`
 ```js
@@ -425,7 +383,7 @@ connect.core.onAuthorizeRetriesExhausted(() => {
   console.log("We have failed the agent authorization api multiple times and we are out of retries");
 });
 ```
-Subscribes a callback function to be called when multiple agent authorization api failures have happened. After this event occurs, streams will not try to redirect the user to login when more agent authorization api failures happen. Therefore, it may be prudent to indicate to the agent that there is a problem related to authorization.
+複数のエージェント認証 api の失敗が発生したときに呼び出されるコールバック関数をサブスクライブします。このイベントが発生した後、ストリームは、さらにエージェントの認証 api の失敗が発生したときに、ユーザをログインにリダイレクトしようとしません。したがって、認可に関連する問題があることをエージェントに示すことが賢明かもしれない。
 
 ### `connect.core.terminate()`
 ```js
@@ -434,20 +392,20 @@ connect.core.initCCP(containerDiv, { /* ... */ });
 
 // some time later...
 connect.core.terminate();
-var iframe = containerDiv.firstElementChild; // assumes there's nothing else in the container
+var iframe = containerDiv.firstElementChild; // コンテナ内に何もないと仮定する
 containerDiv.removeChild(iframe);
 ```
-Unitializes Amazon Connect Streams. Removing any subscription methods that have been called.
+Amazon Connect Streamsをユニット化します。呼び出されたサブスクリプション・メソッドをすべて削除します。
 
-The CCP iframe will not be removed though, so you'll have to manually remove it.
+CCP iframeは削除されないので、手動で削除する必要があります。
 
 ### `connect.core.viewContact()`
 ```js
 var contactId = new connect.Agent().getContacts()[0].getContactId();
 connect.core.viewContact(contactId);
 ```
-Changes the currently selected contact in the CCP user interface.
-Useful when an agent handles more than one concurrent chat.
+CCP ユーザーインターフェースで現在選択されているコンタクトを変更します。
+エージェントが複数のチャットを同時に処理する場合に便利です。
 
 ### `connect.core.onViewContact()`
 ```js
@@ -456,35 +414,35 @@ connect.core.onViewContact(function(event) {
   // ...
 });
 ```
-Subscribes a callback that starts whenever the currently selected contact on the CCP changes.
-The callback is called when the contact changes in the UI (i.e. via `click` events) or via `connect.core.viewContact()`.
+CCP で現在選択されているコンタクトが変更されるたびに開始されるコールバックをサブスクライブします。
+このコールバックは UI 上でコンタクトが変更されたとき（つまり `click` イベントを経由したとき）、または `connect.core.viewContact()` を経由したときに呼び出されます。
 
-More precisely, `onViewContact` is called in the below scenarios:
+より正確には、`onViewContact`は以下のシナリオで呼び出されます：
 
-1. There is a new incoming contact, and there are no other contacts currently open in CCP. This includes both outbound contacts and contacts that are accepted using auto-accept
-2. A contact is closed and there is at least one other open contact
-    1. CCP will call `onViewContact` with the next contact in the list of contacts
-3. A contact has been selected as the active contact in CCP. This can happen in multiple ways
-    1. An agent clicks on that contact’s tab in native or embedded CCP
-    2. CCP will trigger `onViewContact` when the close contact button is clicked in native or embedded CCP. CCP will call `onViewContact` with the next contact in the list of contacts. Note that this is redundant with scenario 2 and will result in `onViewContact` being called twice. 
-4. A new contact has been accepted using the accept contact button in native or embedded CCP
-5. `connect.core.viewContact` is called in your custom implementation
-6. There are some cases when `onViewContact` is called with an empty string. This denotes that the active contact has been unset. That happens in the following scenarios:
-    1. The close contact button is clicked and there are no other active contacts
-    2. An agent clicks on a new channel in CCP
-        1. Note: in this case `onViewContact` will be called with a contact from the newly selected channel shortly after
+1. 新しい受信コンタクトがあり、CCP で現在開いている他のコンタクトがありません。これには、発信コンタクトと自動受信を使用して受信されたコンタクトの両方が含まれます。
+2. コンタクトが閉じており、他に開いているコンタクトが少なくとも1つある。
+    1. CCP は、連絡先リストの次の連絡先で `onViewContact` を呼び出します。
+3. あるコンタクトが CCP でアクティブなコンタクトとして選択された。これは複数の方法で発生します。
+    1. エージェントが、ネイティブ CCP または埋め込み CCP でその連絡先のタブをクリックする。
+    2. ネイティブCCPまたは埋め込みCCPで[コンタクトを閉じる]ボタンがクリックされると、CCPは `onViewContact`を呼び出します。CCP は、連絡先リストの次の連絡先で `onViewContact` を呼び出します。これはシナリオ2と冗長であり、`onViewContact`が2回呼び出されることになることに注意してください。
+4. ネイティブCCPまたは埋め込みCCPの「連絡先を承認」ボタンを使用して、新しい連絡先が承認されました。
+5. カスタム実装で `connect.core.viewContact` が呼び出される。
+6. `onViewContact`が空の文字列で呼び出される場合があります。これは、アクティブなコンタクトが設定されていないことを示します。これは、以下のシナリオで発生します：
+    1. コンタクトを閉じるボタンがクリックされ、他にアクティブなコンタクトがない。
+    2. エージェントがCCPの新しいチャネルをクリックした場合
+        1. 注: この場合、`onViewContact` は、新しく選択されたチャネルのコンタクトで呼び出されます。
 
 ### `connect.core.onAuthFail()`
 ```js
 connect.core.onAuthFail(function() { /* ... */ });
 ```
-Subscribes a callback that starts whenever authentication fails (e.g. SAML authentication).
+認証に失敗したときに開始するコールバックをサブスクライブします (例: SAML 認証)。
 
 ### `connect.core.onAccessDenied()`
 ```js
 connect.core.onAccessDenied(function() { /* ... */ });
 ```
-Subscribes a callback that starts whenever authorization fails (i.e. access denied).
+認可に失敗する（アクセスが拒否される）たびに開始されるコールバックをサブスクライブする。
 
 ### `connect.core.onSoftphoneSessionInit()`
 ```js
@@ -496,7 +454,7 @@ connect.core.onSoftphoneSessionInit(function({ connectionId }) {
   }
 });
 ```
-Subscribes a callback that starts whenever a new webrtc session is created. Used for handling the rtc session stats.
+新しい webrtc セッションが作成されるたびに開始するコールバックを購読します。rtc セッションの統計情報の処理に使用されます。
 
 ### `connect.core.getWebSocketManager()`
 ```js
@@ -507,14 +465,14 @@ connect.ChatSession.create({
   // ...
 });
 ```
-Gets the `WebSocket` manager. This method is only used when integrating with `amazon-connect-chatjs`.
-See the [amazon-connect-chatjs](https://github.com/amazon-connect/amazon-connect-chatjs) documentation for more information.
+`WebSocket` マネージャを取得する。このメソッドは `amazon-connect-chatjs` と連携する場合にのみ使用する。
+詳細は [amazon-connect-chatjs](https://github.com/amazon-connect/amazon-connect-chatjs) のドキュメントを参照すること。
 
 ### `connect.core.onInitialized()`
 ```js
 connect.core.onInitialized(function() { /* ... */ });
 ```
-Subscribes a callback that executes when the CCP initialization is completed.
+CCP の初期化が完了したときに実行されるコールバックをサブスクライブします。
 
 ### `connect.core.getFrameMediaDevices()`
 ```js
@@ -522,81 +480,58 @@ Subscribes a callback that executes when the CCP initialization is completed.
   .then(function(devices) { /* ... */ })
   .catch(function(err) { /* ... */ })
 ```
-Returns a promise that is resolved with the list of media devices from iframe. 
-Timeout for the request can be passed as an optional argument. The default timeout is 1000ms.
-The API should be called after the iframe CCP initialization is complete.
+iframe からメディアデバイスのリストを解決したプロミスを返します。
+オプションの引数として、リクエストのタイムアウトを渡すことができます。デフォルトのタイムアウトは 1000ms です。
+このAPIは、iframeのCCPの初期化が完了した後に呼び出す必要があります。
 
-## SAML Authentication
-Streams support Security Assertion Markup Language (SAML) 2.0 to enable single sign-on (SSO) which will allow users to sign in through a SAML 2.0 compatible identity provider (IdP) and gain access to the instance without having to provide separate credentials.
-### Using SAML with Streams
-Going through the basic use case: Customers should be logging in through their IdP by opening a popout window/tab to start the SSO flow. Inside the [`initCCP`](#initialization) function, there are certain optional parameters to take note of which will be useful in setting up SAML. The first will be `loginUrl`, which allows users to link their IdP with Streams. Other optional parameters include `loginPopup`(by default is `true`) and `loginOptions`(only used when `loginPopup` is `true`) which handles the configuration of the popup window for login. When configured correctly, Streams should open up a new window/tab with the login URL provided when authentication is needed, and in the background, a hidden CCP iFrame (built in with streams) will refresh every five seconds until the customer's authentication credentials have been verified. For CCP to load successfully, the SAML federation must be completed successfully along with CCP's initialization execution flow.
-### SSO with a hidden iFrame
-As mentioned above, Streams is currently built with full support for those who perform the SSO flow in a pop out window/tab. For users who would like to perform SSO in an hidden iframe within the same window, please be aware that the IdP may contain a same-origin-policy which can prevent the interactions between the user's domain and IdP. Users will then have to perform the SSO flow by going through the method mentioned above, or delegating the iframe to SSO.
+## SAML 認証
+Streams は SAML 2.0 (Security Assertion Markup Language) をサポートし、シングルサインオン (SSO) を可能にします。これにより、ユーザーは SAML 2.0 互換の ID プロバイダ (IdP) を介してサインインし、別の認証情報を提供することなくインスタンスにアクセスできるようになります。
+### SAML とストリームの使用
+基本的なユースケースを説明する： 顧客は、SSO フローを開始するためのポップアウトウィンドウ/タブを開き、IdP を通してログインする。initCCP`](#initialization) 関数の内部には、SAML を設定する際に役立つオプションのパラメータがある。最初のパラメータは `loginUrl` であり、ユーザが自分の IdP を Streams と連携させるためのものである。その他のオプションパラメータには `loginPopup` (デフォルトは `true`) と `loginOptions` (`loginPopup` が `true` の場合にのみ使用される) がある。正しく設定されている場合、認証が必要になると、Streams はログイン URL が指定された新しいウィンドウ/タブを開き、バックグラウンドでは、顧客の認証情報が確認されるまで、非表示の CCP iFrame（ストリームに組み込まれています）が 5 秒ごとに更新されます。CCP が正常にロードされるには、CCP の初期化実行フローとともに、SAML フェデレーションが正常に完了する必要がある。
+### 隠しiFrameでのSSO
+上述したように、Streamsは現在、ポップアウトウィンドウ/タブでSSOフローを実行するユーザーを完全にサポートするように構築されています。同じウィンドウ内の隠されたiframeでSSOを実行したいユーザは、IdPがsame-origin-policyを含んでいる可能性があり、ユーザのドメインとIdP間の相互作用を妨げる可能性があることに注意してください。その場合、ユーザは上記の方法を取るか、iframeをSSOに委譲することでSSOフローを実行する必要があります。
 
-**Note**: For users who want to remove the SSO hidden iframe, please wait until CCP's initialization and SAML flow execution are executed successfully. From the function `connect.core.onInitialized(callback)`, mentioned above, you can add a callback function after CCP initialization execution is complete, Other functions that may be helpful to help monitor the authentication flow are `connect.core.onAuthFail(callback)`(allows users to subscribe a callback function when authentication fails), and `connect.core.onAuthorizeRetriesExhausted(callback)`(subscribes a callback function when multiple agent authorization api failures have happened)
+**注意 SSO hidden iframe を削除したいユーザは、CCP の初期化と SAML フローの実行が成功するまで待ってください。その他の関数として、`connect.core.onAuthFail(callback)`（認証に失敗したときにコールバック関数をサブスクライブできる）、`connect.core.onAuthorizeRetriesExhausted(callback)`（複数のエージェントの認証に失敗したときにコールバック関数をサブスクライブできる）があります。
 
-## Event Subscription
-Event subscriptions link your app into the heartbeat of Amazon Connect by allowing your
-code to be called when new agent information is available.
+## イベントサブスクリプション
+イベントサブスクリプションは、新しいエージェント情報が利用可能になったときにあなたのコードが呼び出されるようにすることで、あなたのアプリを Amazon Connect のハートビートにリンクします。
 
-Event subscription works by providing callbacks to the Streams API which are
-called when the agent is initialized, and when contacts are first detected.
-Then, `on*()` event subscription methods are provided with callbacks which are
-called when events occur on those specific objects. These return subscription
-objects, which for contacts are automatically cleaned up when those contacts no
-longer exist. Users can also manually unsubscribe from events by calling
-`sub.unsubscribe()` on the subscriptions returned by these methods.
+イベントサブスクリプションは、エージェントが初期化されたときと、コンタクトが最初に検出されたときに呼び出されるコールバックを Streams API に提供することで動作します。
+次に、`on*()` イベントサブスクリプションメソッドは、特定のオブジェクトでイベントが発生したときに呼び出されるコールバックを提供します。これらはサブスクリプションオブジェクトを返し、コンタクトについては、それらのコンタクトが存在しなくなったときに自動的にクリーンアップされます。ユーザは、これらのメソッドによって返された購読オブジェクトに対して `sub.unsubscribe()` を呼び出すことで、手動でイベントの購読を解除することもできます。
 
 ### `connect.agent()`
 ```js
 connect.agent(function(agent) { /* ... */ });
 ```
-Subscribe a method to be called when the agent is initialized. If the agent has
-already been initialized, the call is synchronous and the callback is invoked
-immediately. Otherwise, the callback is invoked once the first agent data is
-received from upstream. This callback is provided with an `Agent` API object,
-which can also be created at any time after initialization is complete via `new
-connect.Agent()`.
+エージェントが初期化されたときに呼び出されるメソッドをサブスクライブします。エージェントがすでに初期化されている場合、呼び出しは同期で、コールバックはすぐに呼び出されます。そうでない場合は、最初のエージェントデータをアップストリームから受信した時点でコールバックが呼び出されます。このコールバックは `Agent` API オブジェクトと共に提供される、
+このオブジェクトは初期化が完了した後、いつでも `new connect.Agent()` によって作成することができます。
 
 ### `connect.contact()`
 ```js
 connect.contact(function(contact) { /* ... */ });
 ```
-Subscribe a method to be called for each newly detected agent contact. Note
-that this function is not only for incoming contacts, but for contacts which
-already existed when Streams was initialized, such as from a previous agent
-session. This callback is provided with a `Contact` API object for this
-contact. `Contact` API objects can also be listed from the `Agent` API by
-calling `agent.getContacts()`.
+新しく検出されたエージェントコンタクトごとに呼び出されるメソッドをサブスクライブします。この関数は、受信コンタクトだけでなく、以前のエージェントセッションのコンタクトなど、Streams が初期化されたときに既に存在していたコンタクトも対象となることに注意してください。このコールバックは、このコンタクトの `Contact` API オブジェクトと共に提供されます。Contact` API オブジェクトは `Agent` API から `agent.getContacts()` を呼び出して取得することもできます。
 
 ### `connect.onWebSocketInitFailure()`
 ```
 connect.onWebSocketInitFailure(function() { ... });
 ```
-Subscribe a method to be called when the WebSocket connection fails to initialize.
-If the WebSocket has already failed at least once in initializing, the call is
-synchronous and the callback is invoked immediately.  Otherwise, the callback is
-invoked once the first attempt to initialize fails. Since the WebSocket connection
-will be periodically refreshed as needed, the callback will also be invoked 
-if the WebSocket connection fails to re-initialize successfully.
+WebSocket 接続の初期化に失敗したときに呼び出されるメソッドをサブスクライブします。
+WebSocket の初期化に一度でも失敗している場合は、同期的にコールバックが呼び出されます。 そうでない場合は、最初の初期化に失敗した時点でコールバックが呼び出されます。WebSocket 接続は必要に応じて定期的に更新されるため、WebSocket 接続の再初期化に失敗した場合もコールバックが呼び出されます。
 
 ## Agent API
-The Agent API provides event subscription methods and action methods which can
-be called on behalf of the agent. There is only ever one agent per Streams
-instantiation and all contacts and actions are assumed to be taken on behalf of
-this one agent.
+エージェントAPIは、エージェントに代わって呼び出されるイベントサブスクリプションメソッドとアクションメソッドを提供します。Streamsのインスタンス化ごとにエージェントは1つだけ存在し、すべてのコンタクトとアクションはこの1つのエージェントに代わって実行されると仮定されます。
 ### `agent.onRefresh()`
 ```js
 agent.onRefresh(function(agent) { /* ... */ });
 ```
-Subscribe a method to be called whenever new agent data is available.
+新しいエージェントデータが利用可能になるたびに呼び出されるメソッドをサブスクライブします。
 
 ### `agent.onStateChange()`
 ```js
 agent.onStateChange(function(agentStateChange) { /* ... */ });
 ```
-Subscribe a method to be called when the agent's state changes. The
-`agentStateChange` object contains the following properties:
+エージェントの状態が変化したときに呼び出されるメソッドをサブスクライブする。`agentStateChange` オブジェクトは以下のプロパティを持つ：
 
 * `agent`: The `Agent` API object.
 * `oldState`: The name of the agent's previous state.
@@ -606,31 +541,25 @@ Subscribe a method to be called when the agent's state changes. The
 ```js
 agent.onRoutable(function(agent) { /* ... */ });
 ```
-Subscribe a method to be called when the agent becomes routable, meaning
-that they can be routed incoming contacts. 
+エージェントがルーティング可能になったときに呼び出されるメソッドをサブスクライブします。
 
 ### `agent.onNotRoutable()`
 ```js
 agent.onNotRoutable(function(agent) { /* ... */ });
 ```
-Subscribe a method to be called when the agent becomes not-routable, meaning
-that they are online but cannot be routed incoming contacts.
+エージェントがルート不可になったときに呼び出されるメソッドをサブスクライブします。
 
 ### `agent.onOffline()`
 ```js
 agent.onOffline(function(agent) { /* ... */ });
 ```
-Subscribe a method to be called when the agent goes offline.
+エージェントがオフラインになったときに呼び出されるメソッドをサブスクライブします。
 
 ### `agent.onError()`
 ```js
 agent.onError(function(agent) { /* ... */ });
 ```
-Subscribe a method to be called when the agent is put into an error state. This
-can occur if Streams is unable to get new agent data, or if the agent fails to
-accept an incoming contact, or in other error cases. It means that the agent is
-not routable, and may require that the agent switch to a routable state before
-being able to be routed contacts again.
+エージェントがエラー状態になったときに呼び出されるメソッドをサブスクライブします。これは、Streams が新しいエージェントデータを取得できない場合や、エージェントが受信コンタクトを受け付けない場合、その他のエラー時に発生します。これはエージェントがルーティング可能でないことを意味し、再度コンタクトをルーティングできるようになる前に、エージェントをルーティング可能な状態に切り替える必要があるかもしれません。
 
 ### `agent.onSoftphoneError()`
 ```js
@@ -640,118 +569,114 @@ agent.onSoftphoneError(function(error) {
    console.log("Error endpoint url: ", error.endPointUrl);
 });
 ```
-Subscribe a method to be called when the agent is put into an error state specific to softphone funcionality.
+エージェントがソフトフォン特有のエラー状態になったときに呼び出されるメソッドをサブスクライブします。
 
-The `error` argument is a `connect.SoftphoneError` instance with the following fields: `errorType`, `errorMessage`, `endPointUrl`.
+`error` 引数は `connect.SoftphoneError` インスタンスで、以下のフィールドを持つ： `errorType`、`errorMessage`、`endPointUrl` である。
 
 ### `agent.onWebSocketConnectionLost()`
 ```js
 agent.onWebSocketConnectionLost(function(agent) { ... });
 ```
-Subscribe a method to be called when the agent is put into an error state specific to losing a WebSocket connection.
+エージェントが WebSocket 接続を失うエラー状態になったときに呼び出されるメソッドをサブスクライブします。
 
 ### `agent.onWebSocketConnectionGained()`
 ```js
 agent.onWebSocketConnectionGained(function(agent) { ... });
 ```
-Subscribe a method to be called when the agent gains a WebSocket connection.
+エージェントが WebSocket 接続を獲得したときに呼び出されるメソッドをサブスクライブします。
 
 ### `agent.onAfterCallWork()`
 ```js
 agent.onAfterCallWork(function(agent) { /* ... */ });
 ```
-Subscribe a method to be called when the agent enters the "After Call Work" (ACW) state (note that this event is only triggered for voice contacts even though all contacts enter ACW contact state. See contact.onACW below). This is a non-routable state which exists to allow agents some time to wrap up after handling a contact before they are routed additional contacts.
+エージェントが "After Call Work"(ACW)ステートに入ったときに呼び出されるメソッドをサブスクライブします(すべてのコンタクトがACWコンタクトステートに入ったとしても、このイベントは音声コンタクトに対してのみトリガされることに注意してください)。以下のcontact.onACWを参照してください)。これは、エージェントが追加のコンタクトをルーティングされる前に、コンタクトを処理した後にラップアップする時間を与えるために存在する、ルーティング不可能な状態です。
 
 ### `agent.getState()` / `agent.getStatus()`
 ```js
 var state = agent.getState();
 ```
-Get the agent's current `AgentState` object indicating their availability state type.
-This object contains the following fields:
+エージェントの現在の `AgentState` オブジェクトを取得します。
+このオブジェクトには以下のフィールドが含まれる：
 
-* `agentStateARN`: The agent's current state ARN.
-* `name`: The name of the agent's current availability state.
-* `startTimestamp`: A `Date` object that indicates when the state was set.
-* `type`: The agent's current availability state type, as per the `AgentStateType` enumeration.
+* `agentStateARN`： エージェントの現在の状態 ARN。
+* `name`： エージェントの現在の可用性状態の名前。
+* startTimestamp`: 状態が設定された日時を示す `Date` オブジェクト： 状態がいつ設定されたかを示す `Date` オブジェクト。
+* `type`: 現在の利用可能状態のタイプ： AgentStateType` 列挙型に従った、エージェントの現在の可用性状態のタイプ。
 
-This object may contain a state that was predefined by the system. Please see [`agent.getAvailabilityState()`](#agentgetavailabilitystate) to retrieve the agent's user-defined state.
+このオブジェクトには、システムによって事前に定義された状態が含まれている可能性があります。エージェントのユーザ定義状態を取得するには、[`agent.getAvailabilityState()`](#agentgetavailabilitystate)を参照してください。
+
 ### `agent.getStateDuration()` / `agent.getStatusDuration()`
 ```js
 var millis = agent.getStateDuration();
 ```
-Get the duration of the agent's state in milliseconds relative to local time. This takes into
-account time skew between the JS client and the Amazon Connect service.
+エージェントの状態の継続時間を、ローカル時間に対するミリ秒単位で取得します。これは、JSクライアントとAmazon Connectサービス間のタイムスキューを考慮しています。
 
 ### `agent.getPermissions()`
 ```js
 var permissions = agent.getPermissions(); // e.g. ["outboundCall"]
 ```
-Mostly for internal purposes only. Contains strings which indicates actions that the agent can
-take in the CCP.
+ほとんどの場合、内部目的でのみ使用されます。エージェントが CCP 内で実行できるアクションを示す文字列が含まれます。
 
 ### `agent.getContacts()`
 ```js
 var contacts = agent.getContacts(contactTypeFilter);
 ```
-Gets a list of `Contact` API objects for each of the agent's current contacts.
+エージェントの現在の各連絡先の `Contact` API オブジェクトのリストを取得します。
 
-* `contactTypeFilter`: Optional. If provided, only contacts of the given `ContactType` enum are returned.
+* `contactTypeFilter`： オプション。指定した場合、指定した `ContactType` 列挙型のコンタクトのみを返す。
 
 ### `agent.getConfiguration()`
 ```js
 var config = agent.getConfiguration();
 ```
-Gets the full `AgentConfiguration` object for the agent. This object contains the following fields:
+エージェントの完全な `AgentConfiguration` オブジェクトを取得する。このオブジェクトは以下のフィールドを含む：
 
-- `agentStates`: See `agent.getAgentStates()` for more info.
-- `dialableCountries`: See `agent.getDialableCountries()` for more info.
-- `extension`: See `agent.getExtension()` for more info.
-- `name`: See `agent.getName()` for more info.
-- `permissions`: See `agent.getPermissions()` for more info.
-- `routingProfile`: See `agent.getRoutingProfile()` for more info.
-- `softphoneAutoAccept`: Indicates whether auto accept soft phone calls is enabled.
-- `softphoneEnabled`: See `agent.isSoftphoneEnabled()` for more info.
-- `username`: The username for the agent as entered in their Amazon Connect user account.
-- `agentARN`: See `agent.getAgentARN()` for more info.
+- `agentStates`を参照してください： 詳細は `agent.getAgentStates()` を参照。
+- `dialableCountries`： 詳細は `agent.getDialableCountries()` を参照。
+- `extension`： 詳細は `agent.getExtension()` を参照。
+- `name`: 詳細は `agent.getName()` を参照。
+- `permissions`: 詳細は `agent.getPermissions()` を参照すること： 詳細は `agent.getPermissions()` を参照。
+- `routingProfile`: 詳細は `agent.getRoutingProfile()` を参照： 詳細は `agent.getRoutingProfile()` を参照。
+- `softphoneAutoAccept`： ソフトフォンの自動着信を有効にするかどうかを示す。
+- `softphoneEnabled`： 詳細は `agent.isSoftphoneEnabled()` を参照。
+- `username`： Amazon Connect のユーザーアカウントに登録されているエージェントのユーザー名。
+- `agentARN`: エージェントのユーザー名： 詳細は `agent.getAgentARN()` を参照。
 
 ### `agent.getAgentStates()`
 ```js
 var agentStates = agent.getAgentStates();
 ```
-Gets the list of selectable `AgentState` API objects. These are the agent states that can be
-selected when the agent is not handling a live contact. Each `AgentState` object contains
-the following fields:
+選択可能な `AgentState` API オブジェクトのリストを取得する。これらはエージェントがライブコンタクトを処理していないときに選択できるエージェントの状態です。各 `AgentState` オブジェクトは以下のフィールドを含む：
 
-* `agentStateARN` The agent state ARN.
-* `type`: The agent state type represented as a `AgentStateType` enum value.
-* `name`: The name of the agent state to be displayed in the UI.
+* `AgentStateARN`： エージェントの状態 ARN。
+* `type`： エージェントの状態タイプを `AgentStateType` 列挙型の値で表す。
+* `name`: エージェント状態の名前： UI に表示するエージェント状態の名前。
 
 ### `agent.getAvailabilityState()`
 ```js
 var agentState = agent.getAvailabilityState();
 ```
-Unlike [`agent.getState()`](#agentgetstate--agentgetstatus) which could return a system defined state,
-this function will only return the agent's current [user-changeable / definable state](https://docs.aws.amazon.com/connect/latest/adminguide/agent-custom.html).
-The object will contain the following fields:
+システムで定義された状態を返す [`agent.getState()`](#agentgetstate--agentgetstatus) とは異なり、この関数はエージェントの現在の [ユーザが変更可能/定義可能な状態](https://docs.aws.amazon.com/connect/latest/adminguide/agent-custom.html) だけを返します。
+オブジェクトは以下のフィールドを含みます：
 
-* `state` The name of the agent state.
-* `timestamp`: A `Date` object that indicates when the agent was set to that state.
+* `state`： エージェントの状態名。
+* `timestamp`： エージェントがいつその状態に設定されたかを示す `Date` オブジェクト。
 
 ### `agent.getRoutingProfile()`
 ```js
 var routingProfile = agent.getRoutingProfile();
 ```
-Gets the agent's routing profile. The routing profile contains the following fields:
+エージェントのルーティングプロファイルを取得します。ルーティングプロファイルは以下のフィールドを含みます：
 
-* `channelConcurrencyMap`: See `agent.getChannelConcurrency()` for more info.
-* `defaultOutboundQueue`: The default queue which should be associated with outbound contacts. See `queues` for details on properties.
-* `name`: The name of the routing profile.
-* `queues`: The queues contained in the routing profile. Each queue object has the following properties:
-  * `name`: The name of the queue.
-  * `queueARN`: The ARN of the queue.
-  * `queueId`: Alias for `queueARN`.
-* `routingProfileARN`: The routing profile ARN.
-* `routingProfileId`: Alias for `routingProfileARN`.
+* `channelConcurrencyMap`： 詳細は `agent.getChannelConcurrency()` を参照。
+* `defaultOutboundQueue`： アウトバウンドコンタクトに関連付けるデフォルトのキュー。プロパティの詳細については `queues` を参照。
+* `name`: ルーティングプロファイルの名前： ルーティングプロファイルの名前。
+* `queues`: ルーティングプロファイルの名前： ルーティングプロファイルに含まれるキュー。各キューオブジェクトは以下のプロパティを持ちます：
+  * `name`： キューの名前。
+  * `queueARN`： キューの ARN。
+  * `queueId`: `queueARN` のエイリアス。
+* `routingProfileARN`: ルーティングプロファイルの ARN。
+* `routingProfileId`: `routingProfileARN` のエイリアス。
 
 ### `agent.getChannelConcurrency()`
 ```js
@@ -761,7 +686,7 @@ var concurrencyMap = agent.getChannelConcurrency(); // e.g. { VOICE: 0, CHAT: 2 
 
 if (agent.getChannelConcurrency("CHAT") > 1) { /* ... */ }
 ```
-Gets either a number or a map of `ChannelType`-to-number indicating how many concurrent contacts can an agent have on a given channel. 0 represents a disabled channel. The optional `channel` argument must be a value of the enum `ChannelType`.
+エージェントが与えられたチャネルでいくつの同時コンタクトを持つことができるかを示す数値または `ChannelType`-to-number のマップを取得します。0 は無効なチャンネルを表す。オプションの `channel` 引数は `ChannelType` 列挙型の値でなければならない。
 
 ### `agent.getName()`
 ```js
@@ -773,8 +698,7 @@ Gets the agent's user friendly display name.
 ```js
 var extension = agent.getExtension();
 ```
-Gets the agent's phone number. This is the phone number that is dialed by Amazon Connect to connect calls to the agent for incoming and outgoing calls
-if softphone is not enabled.
+Gets the agent's phone number. This is the phone number that is dialed by Amazon Connect to connect calls to the agent for incoming and outgoing calls if softphone is not enabled.
 
 ### `agent.getDialableCountries`
 ```js
@@ -786,8 +710,7 @@ Returns a list of eligible countries to be dialed / deskphone redirected.
 ```js
 if (agent.isSoftphoneEnabled()) { /* ... */ }
 ```
-Indicates whether the agent's phone calls should route to the agent's browser-based softphone or the
-telephone number configured as the agent's extension.
+Indicates whether the agent's phone calls should route to the agent's browser-based softphone or the telephone number configured as the agent's extension.
 
 ### `agent.getAgentARN()`
 
@@ -892,29 +815,19 @@ Returns the endpoints associated with the queueARNs specified in `queueARNs`.
 ```js
 var snapshot = agent.toSnapshot();
 ```
-The data behind the `Agent` API object is ephemeral and changes whenever new data is provided. This method
-provides an opportunity to create a snapshot version of the `Agent` API object and save it for future use,
-such as adding to a log file or posting elsewhere.
+The data behind the `Agent` API object is ephemeral and changes whenever new data is provided. This method provides an opportunity to create a snapshot version of the `Agent` API object and save it for future use, such as adding to a log file or posting elsewhere.
 
 ### `agent.mute()`
 ```js
 agent.mute();
 ```
-Sets the agent local media to mute mode. If `Enhanced monitoring & Mutiparty` is enabled, use 
-`voiceConnection.muteParticipant()` when there are more than 2 agent connections (see example 
-[here](cheat-sheet.md#mute-agent)), since `voiceConnection.muteParticipant()` 
-will mute the connection on the server side, and the server side mute value is the only one 
-accounted for when there are more than 2 connections.
+Sets the agent local media to mute mode. If `Enhanced monitoring & Mutiparty` is enabled, use `voiceConnection.muteParticipant()` when there are more than 2 agent connections (see example [here](cheat-sheet.md#mute-agent)), since `voiceConnection.muteParticipant()` will mute the connection on the server side, and the server side mute value is the only one accounted for when there are more than 2 connections.
 
 ### `agent.unmute()`
 ```js
 agent.unmute();
 ```
-Sets the agent localmedia to unmute mode. If `Enhanced monitoring & Mutiparty` is enabled, use 
-`voiceConnection.unmuteParticipant()` when there are more than 2 agent connections (see example 
-[here](cheat-sheet.md#mute-agent)), since `voiceConnection.unmuteParticipant()` will unmute the 
-connection on the server side, and the server side mute value is the only one accounted for when 
-there are more than 2 connections.
+Sets the agent localmedia to unmute mode. If `Enhanced monitoring & Mutiparty` is enabled, use `voiceConnection.unmuteParticipant()` when there are more than 2 agent connections (see example [here](cheat-sheet.md#mute-agent)), since `voiceConnection.unmuteParticipant()` will unmute the connection on the server side, and the server side mute value is the only one accounted for when there are more than 2 connections.
 
 
 ### `agent.setSpeakerDevice()`
@@ -994,10 +907,7 @@ agent.onBackgroundBlurChanged(function(obj) { /* ... */ });
 Subscribe a method to be called when the agent enables or disables background blur for the camera device (input device for call video).
 
 ## Contact API
-The Contact API provides event subscription methods and action methods which can be called on behalf of a specific
-contact. Contacts come and go and so should these API objects. It is good practice not to persist these objects
-or keep them as internal state. If you need to, store the `contactId` of the contact and make sure that the
-contact still exists by fetching it from the `Agent` API object before calling methods on it.
+The Contact API provides event subscription methods and action methods which can be called on behalf of a specific contact. Contacts come and go and so should these API objects. It is good practice not to persist these objects or keep them as internal state. If you need to, store the `contactId` of the contact and make sure that the contact still exists by fetching it from the `Agent` API object before calling methods on it.
 
 ### `contact.onRefresh()`
 ```js
@@ -1009,8 +919,7 @@ Subscribe a method to be invoked whenever the contact is updated.
 ```js
 contact.onIncoming(function(contact) { /* ... */ });
 ```
-Subscribe a method to be invoked when a queue callback contact is incoming. In this state, the contact is waiting to be
-accepted if it is a softphone call or is waiting for the agent to answer if it is not a softphone call.
+Subscribe a method to be invoked when a queue callback contact is incoming. In this state, the contact is waiting to be accepted if it is a softphone call or is waiting for the agent to answer if it is not a softphone call.
 
 ### `contact.onPending()`
 ```js
@@ -1041,9 +950,7 @@ Subscribe a method to be invoked whenever the contact is missed. This is an even
 ```js
 contact.onEnded(function(contact) { /* ... */ });
 ```
-Subscribe a method to be invoked whenever the contact is ended. This could be due to the conversation
-being ended by the agent, or due to the contact being missed. Call `contact.getState()` to determine the state
-of the contact and take appropriate action.
+Subscribe a method to be invoked whenever the contact is ended. This could be due to the conversation being ended by the agent, or due to the contact being missed. Call `contact.getState()` to determine the state of the contact and take appropriate action.
 
 [Update on v2.7.0]
 The callback function registered via `contact.onEnded ` is no longer invoked when the contact is destroyed. This fix prevents the callback from being invoked twice on ENDED and DESTROYED events.
@@ -1097,13 +1004,9 @@ var originalContactId = contact.getOriginalContactId();
 var initialContactId = contact.getInitialContactId();
 ```
 Get the original (initial) contact id from which this contact was transferred, or none if this is not an internal Connect transfer.
-This is typically a contact owned by another agent, thus this agent will not be able to
-manipulate it. It is for reference and association purposes only, and can be used to share
-data between transferred contacts externally if it is linked by originalContactId.
+This is typically a contact owned by another agent, thus this agent will not be able to manipulate it. It is for reference and association purposes only, and can be used to share data between transferred contacts externally if it is linked by originalContactId.
 
-Note that `contact.getOriginalContactId()` is the original Streams API
-name, but it does not match the internal data naming scheme, which is `initialContactId`, so we added an alias for the same method called
-`contact.getInitialContactId()`.
+Note that `contact.getOriginalContactId()` is the original Streams API name, but it does not match the internal data naming scheme, which is `initialContactId`, so we added an alias for the same method called `contact.getInitialContactId()`.
 
 ### `contact.getType()`
 ```js
@@ -1124,8 +1027,7 @@ Get an object representing the state of the contact. This object has the followi
 ```js
 var millis = contact.getStateDuration();
 ```
-Get the duration of the contact state in milliseconds relative to local time. This takes into
-account time skew between the JS client and the Amazon Connect backend servers.
+Get the duration of the contact state in milliseconds relative to local time. This takes into account time skew between the JS client and the Amazon Connect backend servers.
 
 ### `contact.getQueue()`
 ```js
@@ -1166,23 +1068,19 @@ no longer active.
 ```js
 var thirdPartyConns = contact.getThirdPartyConnections();
 ```
-Get a list of all of the third-party connections, i.e. the list of all connections
-except for the initial connection, or an empty list if there are no third-party connections.
+Get a list of all of the third-party connections, i.e. the list of all connections except for the initial connection, or an empty list if there are no third-party connections.
 
 ### `contact.getSingleActiveThirdPartyConnection()`
 ```js
 var thirdPartyConn = contact.getSingleActiveThirdPartyConnection();
 ```
-In Voice contacts, there can only be one active third-party connection. This
-method returns the single active third-party connection, or null if there are no
-currently active third-party connections.
+In Voice contacts, there can only be one active third-party connection. This method returns the single active third-party connection, or null if there are no currently active third-party connections.
 
 ### `contact.getAgentConnection()`
 ```js
 var agentConn = contact.getAgentConnection();
 ```
-Gets the agent connection. This is the connection that represents the agent's
-participation in the contact.
+Gets the agent connection. This is the connection that represents the agent's participation in the contact.
 
 ### `contact.getActiveConnections()`
 
@@ -1202,8 +1100,7 @@ if (contact.hasTwoActiveParticipants()) {
 
 Determines if there are exactly two active participants on a contact.
 
-When using enhanced monitoring & barge, if there are only two active participants on a contact,
-and one of them is the manager who has barged in, the manager cannot switch back to monitoring mode.
+When using enhanced monitoring & barge, if there are only two active participants on a contact, and one of them is the manager who has barged in, the manager cannot switch back to monitoring mode.
 
 ### `contact.getAttributes()`
 ```js
@@ -1282,8 +1179,7 @@ if (contact.isConnected()) { /* ... */ }
 ```
 Determine whether the contact is in a connected state.
 
-Note that contacts no longer exist once they have been removed. To detect
-these instances, subscribe to the `contact.onEnded()` event for the contact.
+Note that contacts no longer exist once they have been removed. To detect these instances, subscribe to the `contact.onEnded()` event for the contact.
 
 ### `contact.accept()`
 ```js
@@ -1317,8 +1213,7 @@ contact.clear({
    failure: function(err) { /* ... */ }
 });
 ```
-This is a more generic form of `contact.complete()`. Use this for voice, chat, and task contacts to clear the contact
-when the contact is no longer actively being worked on (i.e. it's one of ERROR, ENDED, MISSED, REJECTED). 
+This is a more generic form of `contact.complete()`. Use this for voice, chat, and task contacts to clear the contact when the contact is no longer actively being worked on (i.e. it's one of ERROR, ENDED, MISSED, REJECTED). 
 It works for both monitoring and non-monitoring connections.
 
 Optional success and failure callbacks can be provided to determine if the operation was successful.
@@ -1369,8 +1264,7 @@ contact.toggleActiveConnections({
    failure: function(err) { /* ... */ }
 });
 ```
-Rotate through the connected and on hold connections of the contact. This operation is only valid
-if there is at least one third-party connection and the initial connection is still connected.
+Rotate through the connected and on hold connections of the contact. This operation is only valid if there is at least one third-party connection and the initial connection is still connected.
 
 Optional success and failure callbacks can be provided to determine if the operation was successful.
 
@@ -1381,8 +1275,7 @@ contact.conferenceConnections({
    failure: function(err) { /* ... */ }
 });
 ```
-Conference together the active connections of the conversation. This operation is only valid
-if there is at least one third-party connection and the initial connection is still connected.
+Conference together the active connections of the conversation. This operation is only valid if there is at least one third-party connection and the initial connection is still connected.
 
 Optional success and failure callbacks can be provided to determine if the operation was successful.
 
@@ -1390,9 +1283,7 @@ Optional success and failure callbacks can be provided to determine if the opera
 ```js
 var snapshot = contact.toSnapshot();
 ```
-The data behind the `Contact` API object is ephemeral and changes whenever new data is provided. This method
-provides an opportunity to create a snapshot version of the `Contact` API object and save it for future use,
-such as adding to a log file or posting elsewhere.
+The data behind the `Contact` API object is ephemeral and changes whenever new data is provided. This method provides an opportunity to create a snapshot version of the `Contact` API object and save it for future use, such as adding to a log file or posting elsewhere.
 
 ### `contact.isMultiPartyConferenceEnabled()`
 ```js
@@ -1408,8 +1299,7 @@ if (contact.isUnderSupervision()) {
 }
 ```
 
-Determines if the contact is under manager's supervision, meaning there is another agent on the contact
-that is in barge mode.
+Determines if the contact is under manager's supervision, meaning there is another agent on the contact that is in barge mode.
 
 ### `contact.updateMonitorParticipantState()`
 
@@ -1542,11 +1432,7 @@ Optional success and failure callbacks can be provided to determine if the opera
 
 
 ## Connection API
-The Connection API provides action methods (no event subscriptions) which can be called to manipulate the state
-of a particular connection within a contact. Like contacts, connections come and go. It is good practice not
-to persist these objects or keep them as internal state. If you need to, store the `contactId` and `connectionId`
-of the connection and make sure that the contact and connection still exist by fetching them in order from
-the `Agent` API object before calling methods on them.
+The Connection API provides action methods (no event subscriptions) which can be called to manipulate the state of a particular connection within a contact. Like contacts, connections come and go. It is good practice not to persist these objects or keep them as internal state. If you need to, store the `contactId` and `connectionId` of the connection and make sure that the contact and connection still exist by fetching them in order from the `Agent` API object before calling methods on them.
 
 ### `connection.getContactId()`
 ```js
@@ -1570,8 +1456,7 @@ Gets the endpoint to which this connection is connected.
 ```js
 var state = connection.getState();
 ```
-Gets the `ConnectionState` object for this connection. This object has the
-following fields:
+Gets the `ConnectionState` object for this connection. This object has the following fields:
 
 * `timestamp`: A `Date` object that indicates when the the connection was put in that state.
 * `type`: The connection state type, as per the `ConnectionStateType` enumeration.
@@ -1651,8 +1536,7 @@ conn.sendDigits(digits, {
 
 Send a digit or string of digits through this connection.
 
-This is only valid for contact types that can accept digits,
-currently this is limited to softphone-enabled voice contacts.
+This is only valid for contact types that can accept digits, currently this is limited to softphone-enabled voice contacts.
 
 Optional success and failure callbacks can be provided to determine if the operation was successful.
 
@@ -1679,11 +1563,7 @@ Resume this connection if it was on hold.
 Optional success and failure callbacks can be provided to determine if the operation was successful.
 
 ## VoiceConnection API
-The VoiceConnection API provides action methods (no event subscriptions) which can be called to manipulate the state
-of a particular voice connection within a contact. Like contacts, connections come and go. It is good practice not
-to persist these objects or keep them as internal state. If you need to, store the `contactId` and `connectionId`
-of the connection and make sure that the contact and connection still exist by fetching them in order from
-the `Agent` API object before calling methods on them.
+The VoiceConnection API provides action methods (no event subscriptions) which can be called to manipulate the state of a particular voice connection within a contact. Like contacts, connections come and go. It is good practice not to persist these objects or keep them as internal state. If you need to, store the `contactId` and `connectionId` of the connection and make sure that the contact and connection still exist by fetching them in order from the `Agent` API object before calling methods on them.
 
 ### `voiceConnection.getMediaInfo()`
 ```js
@@ -1819,8 +1699,7 @@ if (conn.isSilentMonitor()) {
 }
 ```
 
-Determine whether the connection is in silent monitoring state. Only the supervisor will see this connection in the snapshot,
-other agents will not see the supervisor's connection in the snapshot while it is in silent monitor state.
+Determine whether the connection is in silent monitoring state. Only the supervisor will see this connection in the snapshot, other agents will not see the supervisor's connection in the snapshot while it is in silent monitor state.
 
 ### `voiceConnection.isBarge()`
 
@@ -1830,8 +1709,7 @@ if (conn.isBarge()) {
 }
 ```
 
-Determine whether the connection is in barge state. All agents will see the supervisor's connection in the snapshot while
-it is in barge state.
+Determine whether the connection is in barge state. All agents will see the supervisor's connection in the snapshot while it is in barge state.
 
 ### `voiceConnection.isSilentMonitorEnabled()`
 
@@ -1841,8 +1719,7 @@ if (conn.isSilentMonitorEnabled()) {
 }
 ```
 
-Determines if the agent has the ability to enter silent monitoring state,
-meaning the agent's monitoringCapabilities contain `MonitoringMode.SILENT_MONITOR` type.
+Determines if the agent has the ability to enter silent monitoring state, meaning the agent's monitoringCapabilities contain `MonitoringMode.SILENT_MONITOR` type.
 
 ### `voiceConnection.isBargeEnabled()`
 
@@ -1852,8 +1729,7 @@ if (conn.isBargeEnabled()) {
 }
 ```
 
-Determines if the agent has the ability to enter barge state,
-meaning the agent's monitoringCapabilities contain `MonitoringMode.BARGE` type.
+Determines if the agent has the ability to enter barge state, meaning the agent's monitoringCapabilities contain `MonitoringMode.BARGE` type.
 
 ### `voiceConnection.getMonitorCapabilities()`
 
@@ -1869,15 +1745,10 @@ Returns the array of enabled monitor states of this connection. The array will c
 var monitorStatus = conn.getMonitorStatus();
 ```
 
-Returns the current monitoring state of this connection. This value can be one of MonitoringMode enum values
-if the agent is supervisor, otherwise the monitorStatus will be undefined for the agent.
+Returns the current monitoring state of this connection. This value can be one of MonitoringMode enum values if the agent is supervisor, otherwise the monitorStatus will be undefined for the agent.
 
 ## ChatConnection API
-The ChatConnection API provides action methods (no event subscriptions) which can be called to manipulate the state
-of a particular chat connection within a contact. Like contacts, connections come and go. It is good practice not
-to persist these objects or keep them as internal state. If you need to, store the `contactId` and `connectionId`
-of the connection and make sure that the contact and connection still exist by fetching them in order from
-the `Agent` API object before calling methods on them.
+The ChatConnection API provides action methods (no event subscriptions) which can be called to manipulate the state of a particular chat connection within a contact. Like contacts, connections come and go. It is good practice not to persist these objects or keep them as internal state. If you need to, store the `contactId` and `connectionId` of the connection and make sure that the contact and connection still exist by fetching them in order from the `Agent` API object before calling methods on them.
 
 ### `chatConnection.getMediaInfo()`
 ```js
@@ -1915,8 +1786,7 @@ if (conn.isSilentMonitor()) {
 }
 ```
 
-Determine whether the connection is in silent monitoring state. Only the supervisor will see this connection in the snapshot,
-other agents will not see the supervisor's connection in the snapshot while it is in silent monitor state.
+Determine whether the connection is in silent monitoring state. Only the supervisor will see this connection in the snapshot, other agents will not see the supervisor's connection in the snapshot while it is in silent monitor state.
 
 ### `chatConnection.isBarge()`
 
@@ -1926,8 +1796,7 @@ if (conn.isBarge()) {
 }
 ```
 
-Determine whether the connection is in barge state. All agents will see the supervisor's connection in the snapshot while
-it is in barge state.
+Determine whether the connection is in barge state. All agents will see the supervisor's connection in the snapshot while it is in barge state.
 
 ### `chatConnection.isSilentMonitorEnabled()`
 
@@ -1937,8 +1806,7 @@ if (conn.isSilentMonitorEnabled()) {
 }
 ```
 
-Determines if the agent has the ability to enter silent monitoring state,
-meaning the agent's monitoringCapabilities contain `MonitoringMode.SILENT_MONITOR` type.
+Determines if the agent has the ability to enter silent monitoring state, meaning the agent's monitoringCapabilities contain `MonitoringMode.SILENT_MONITOR` type.
 
 ### `chatConnection.isBargeEnabled()`
 
@@ -1948,8 +1816,7 @@ if (conn.isBargeEnabled()) {
 }
 ```
 
-Determines if the agent has the ability to enter barge state,
-meaning the agent's monitoringCapabilities contain `MonitoringMode.BARGE` type.
+Determines if the agent has the ability to enter barge state, meaning the agent's monitoringCapabilities contain `MonitoringMode.BARGE` type.
 
 ### `chatConnection.getMonitorCapabilities()`
 
@@ -1965,15 +1832,10 @@ Returns the array of enabled monitor states of this connection. The array will c
 var monitorStatus = conn.getMonitorStatus();
 ```
 
-Returns the current monitoring state of this connection. This value can be one of MonitoringMode enum values
-if the agent is supervisor, otherwise the monitorStatus will be undefined for the agent.
+Returns the current monitoring state of this connection. This value can be one of MonitoringMode enum values　if the agent is supervisor, otherwise the monitorStatus will be undefined for the agent.
 
 ## TaskConnection API
-The TaskConnection API provides action methods (no event subscriptions) which can be called to manipulate the state
-of a particular task connection within a contact. Like contacts, connections come and go. It is good practice not
-to persist these objects or keep them as internal state. If you need to, store the `contactId` and `connectionId`
-of the connection and make sure that the contact and connection still exist by fetching them in order from
-the `Agent` API object before calling methods on them.
+The TaskConnection API provides action methods (no event subscriptions) which can be called to manipulate the state　of a particular task connection within a contact. Like contacts, connections come and go. It is good practice not to persist these objects or keep them as internal state. If you need to, store the `contactId` and `connectionId` of the connection and make sure that the contact and connection still exist by fetching them in order from the `Agent` API object before calling methods on them.
 
 ### `taskConnection.getMediaInfo()`
 ```js
@@ -2000,21 +1862,17 @@ See the [amazon-connect-taskjs documentation](https://github.com/amazon-connect/
 ```js
 var endpoint = Endpoint.byPhoneNumber("+18005550100");
 ```
-Creates an `Endpoint` object for the given phone number, useful for `agent.connect()` and
-`contact.addConnection()` calls.
+Creates an `Endpoint` object for the given phone number, useful for `agent.connect()` and `contact.addConnection()` calls.
 
 ### `connect.hitch()`
 ```js
 agent.onRefresh(connect.hitch(eventHandler, eventHandler._onAgentRefresh));
 ```
 A useful utility function for creating callback closures that bind a function to an object instance.
-In the above example, the "_onAgentRefresh" function of the "eventHandler" will be called when the
-agent is refreshed.
+In the above example, the "_onAgentRefresh" function of the "eventHandler" will be called when the agent is refreshed.
 
 ## Enumerations
-These enumerations are not strictly required but are very useful and helpful for
-the Streams API. They are used extensively by the built-in CCP. All enumerations
-are accessible via `connect.<ENUM_NAME>`.
+These enumerations are not strictly required but are very useful and helpful for the Streams API. They are used extensively by the built-in CCP. All enumerations are accessible via `connect.<ENUM_NAME>`.
 
 ### `AgentStateType`
 This enumeration lists the different types of agent states.
@@ -2111,13 +1969,10 @@ Event types that affect the agent's state.
   - when the `EventType.RELOAD_AGENT_CONFIGURATION` event is sent to the shared worker. This happens in the `Agent.prototype.setConfiguration` method (which is invoked when the ccp settings are saved in the UI)
 
 #### Note
-The `EventBus` is used by the high-level subscription APIs to manage subscriptions
-and is available to users by calling `connect.core.getEventBus()`. Like the other event subscription APIs, calling `eventBus.subscribe(eventName, callback)` will return a subscription object which can be unsubscribed via `sub.unsubscribe()`.
+The `EventBus` is used by the high-level subscription APIs to manage subscriptions and is available to users by calling `connect.core.getEventBus()`. Like the other event subscription APIs, calling `eventBus.subscribe(eventName, callback)` will return a subscription object which can be unsubscribed via `sub.unsubscribe()`.
 
 ## Streams Logger
-The Streams library comes with a logging utility that can be used to easily gather logs and provide
-them for diagnostic purposes. You can even add your own logs to this logger if you prefer. Logs are
-written to the console log per normal and also kept in memory.
+The Streams library comes with a logging utility that can be used to easily gather logs and provide them for diagnostic purposes. You can even add your own logs to this logger if you prefer. Logs are written to the console log per normal and also kept in memory.
 
 ### `connect.getLog()`
 ```js
@@ -2125,13 +1980,9 @@ connect.getLog().warn("The %s broke!", "widget")
    .withException(e)
    .withObject({a: 1, b: 2});
 ```
-Use `connect.getLog()` to get the global logger instance. You can then call one of the `debug`, `info`, `warn` or `error`
-methods to create a new log entry. The logger accepts printf-style parameter interpolation for strings and number
-forms.
+Use `connect.getLog()` to get the global logger instance. You can then call one of the `debug`, `info`, `warn` or `error` methods to create a new log entry. The logger accepts printf-style parameter interpolation for strings and number forms.
 
-Each of these functions returns a `LogEntry` object, onto which additional information can be added. You can call
-`.withException(e)` and pass an exception (`e`) to add stack trace and additional info to the logs, and you can
-call `.withObject(o)` to add an arbitrary object (`o`) to the logs.
+Each of these functions returns a `LogEntry` object, onto which additional information can be added. You can call `.withException(e)` and pass an exception (`e`) to add stack trace and additional info to the logs, and you can call `.withObject(o)` to add an arbitrary object (`o`) to the logs.
 
 A new method `sendInternalLogToServer()` that can be chained to the other methods of the logger has been implemented and is intended for internal use only. It is NOT recommended for use by customers.
 
